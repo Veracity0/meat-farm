@@ -1,0 +1,2 @@
+https://github.com/Veracity0/vprops.git
+https://github.com/Veracity0/vcon.git
