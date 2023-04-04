@@ -10,7 +10,7 @@ import <vcon.ash>
 
 // Potentially useful workshed items:
 //
-// - model train set - 1,600 Meat every 8 turns (200 mpa)
+// - model train set - ~1,600 Meat every 8 turns (200 mpa)
 // - spinning wheel - level cubed (max 30 = 27,000) Meat once per day (<75 mpa)
 // - Mayo Clinic - Mayoflex = +1 adventure per food (10? extra turns)
 //
@@ -27,7 +27,7 @@ import <vcon.ash>
 //    Use spinning wheel in inventory
 //    Use spinning wheel in workshed
 // 
-// Workshed cycle with Mayo Clinic & train set - 200 mpa + 10 turns every other day
+// Workshed cycle with Mayo Clinic & train set - 200 mpa + 10? turns every other day
 //    (Mayo Clinic in workshed)
 //    Eat with Mayoflex
 //    Use model train set in inventory
@@ -37,7 +37,7 @@ import <vcon.ash>
 //    Run turns
 //    Use Mayo Clinic in inventory
 // 
-// Workshed cycle with Mayo Clinic & spinning wheel - 27,000 Meat per day + 10 turns every other day
+// Workshed cycle with Mayo Clinic & spinning wheel - 27,000 Meat per day + 10? turns every day
 //    (Mayo Clinic in workshed)
 //    Eat with Mayoflex
 //    Run turns
