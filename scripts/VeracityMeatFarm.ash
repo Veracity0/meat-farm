@@ -8,48 +8,6 @@ import <vcon.ash>
 // *        To Do            *
 // ***************************
 
-// Potentially useful workshed items:
-//
-// - model train set - ~1,600 Meat every 8 turns (200 mpa)
-// - spinning wheel - level cubed (max 30 = 27,000) Meat once per day (<75 mpa)
-// - Mayo Clinic - Mayoflex = +1 adventure per food (10? extra turns)
-//
-// Can use 2 per day:
-//
-// Workshed cycle with spinning wheel & train set - 200 mpa + 27,000 Meat per day
-//    (Spinning Wheel in workshed)
-//    Use spinning wheel in workshed
-//    Use model train set in inventory
-//    Run turns
-//    ----
-//    (Model Train Set in workshed)
-//    Run turns
-//    Use spinning wheel in inventory
-//    Use spinning wheel in workshed
-// 
-// Workshed cycle with Mayo Clinic & train set - 200 mpa + 10? turns every other day
-//    (Mayo Clinic in workshed)
-//    Eat with Mayoflex
-//    Use model train set in inventory
-//    Run turns
-//    ----
-//    (Model Train Set in workshed)
-//    Run turns
-//    Use Mayo Clinic in inventory
-// 
-// Workshed cycle with Mayo Clinic & spinning wheel - 27,000 Meat per day + 10? turns every day
-//    (Mayo Clinic in workshed)
-//    Eat with Mayoflex
-//    Run turns
-//    Use spinning wheel in inventory
-//    Use spinning wheel in workshed
-//    ----
-//    (Spinning Wheel in workshed)
-//    Use spinning wheel in workshed
-//    Use Mayo Clinic in inventory
-//    Eat with Mayoflex
-//    Run turns
-//
 // If you have a whitelist to BAFH and have a VIP lounge key, go there
 // to use all the furniture.
 //
@@ -1159,6 +1117,46 @@ monster_set vote_monsters = define_property( "VMF.WorthyVoteMonsters", "monster"
 
 monster_list witchess_fights = define_property( "VMF.WitchessMonsters", "monster", "Witchess Knight", "list" );
 
+// *** Workshed Items ****
+
+// You can replace an item in your workshed once per day. Therefore you can benefit from two such
+// items per day: the one you start with and the one you switch to. You can configure two items and
+// we will cycle through them:
+//
+// Day 1: start with item 1
+//        do stuff with it
+//        switch to item 2
+//        do stuff with it
+// Day 2: start with item 2
+//        do stuff with it
+//        switch to item 1
+//        do stuff with it
+//
+// What, exactly we "do" with each item, and when we "switch" depends on which two items we use.
+//
+// We know how to use the following workshed items:
+//
+//        model train set	~1,600 Meat every 8 turns (200 mpa)
+//				This should be installed before running fights
+//        spinning wheel 	level cubed (max 30 = 27,000) Meat once per day (<75 mpa)
+//				This should be used immediately whenever it is in the workshed
+//				It should be installed after turns have been run, since gaining
+//				levels (until Level 30) will improve its yield
+//        portable Mayo Clinic	Mayoflex = +1 adventure per food (10? extra turns)
+//				This should be used for all eating before switching to a different
+//				item. That implies it is usable only when you can have it in your
+//				workshed before you eat: every other day with a model train set or
+//				every day with a spinning wheel.
+//
+// Depending on your diet, fullness capacity, and expected MPA, Mayo Clinic is likely the weakest.
+// I recommend the model train set and spinning wheel, but you may not have both of those.
+// You may not have more than one workshed item - or even one.
+//
+// Therefore, the default configuration lists three items, and we will use the first two we find.
+// If you have none (or only one), we will not swap workshed items.
+
+item_list workshed_cycle = define_property( "VMF.WorkshedCycle", "item", "model train set|spinning wheel|portable Mayo Clinic", "list" );
+
 // Use saved outfits rather than maximizer, since I am willing to give
 // up Meat Drop in order to get special item drops from:
 //
@@ -2010,6 +2008,13 @@ static monster_set witchess_monsters = $monsters[
     Witchess Queen
 ];
 
+// *** Workshed Items ****
+static item_set workshed_items = $items[
+    model train set,
+    spinning wheel,
+    portable Mayo clinic
+];
+
 static class NO_CLASS = $class[ none ];
 static effect NO_EFFECT = $effect[ none ];
 static familiar NO_FAMILIAR = $familiar[ none ];
@@ -2059,7 +2064,11 @@ static item GLITCH_ITEM = $item[ [glitch season reward name] ];
 static item GUZZLR_TABLET = $item[ Guzzlr tablet ];
 static item I_VOTED_STICKER = $item[ &quot;I Voted!&quot; sticker ];
 static item LOUNGE_KEY = $item[ Clan VIP Lounge key ];
+static item MAYO_CLINIC = $item[ portable Mayo Clinic ];
+static item MAYOFLEX = $item[ Mayoflex ];
+static item MAYO_MINDER = $item[ Mayo Minder&trade; ];
 static item MIME_ARMY_SHOTGLASS = $item[ mime army shotglass ];
+static item MODEL_TRAIN_SET = $item[ model train set ];
 static item MUMMING_TRUNK = $item[ mumming trunk ];
 static item PHOTOCOPIED_MONSTER = $item[ photocopied monster ];
 static item PLASTIC_VAMPIRE_FANGS = $item[ plastic vampire fangs ];
@@ -2070,6 +2079,7 @@ static item ROYAL_TEA = $item[ cuppa Royal tea ];
 static item SAND_DOLLAR = $item[ sand dollar ];
 static item SONGBOOM_BOOMBOX = $item[ SongBoom&trade; BoomBox ];
 static item SOURCE_TERMINAL = $item[ Source terminal ];
+static item SPINNING_WHEEL = $item[ spinning wheel ];
 static item SPOOKY_PUTTY_MONSTER = $item[ Spooky Putty monster ];
 static item SPOOKY_PUTTY_SHEET = $item[ Spooky Putty sheet ];
 static item TEA_TREE = $item[ potted tea tree ];
@@ -2179,18 +2189,24 @@ boolean have_genie_bottle = ( available_amount( GENIE_BOTTLE ) > 0 );
 boolean have_glitch_item = ( item_amount( GLITCH_ITEM ) > 0 );
 boolean have_guzzlr_tablet = ( item_amount( GUZZLR_TABLET ) > 0 );
 boolean have_lounge_key = ( item_amount( LOUNGE_KEY ) > 0 );
+boolean have_mayo_clinic = campground contains MAYO_CLINIC || ( available_amount( MAYO_CLINIC ) > 0 );
+boolean have_mayo_minder = ( item_amount( MAYO_MINDER ) > 0 );
 boolean have_mime_army_shotglass = ( available_amount( MIME_ARMY_SHOTGLASS ) > 0 );
+boolean have_model_train_set = campground contains MODEL_TRAIN_SET || ( available_amount( MODEL_TRAIN_SET ) > 0 );
 boolean have_mumming_trunk = ( available_amount( MUMMING_TRUNK ) > 0 );
 boolean have_plastic_vampire_fangs = ( available_amount( PLASTIC_VAMPIRE_FANGS ) > 0 );
 boolean have_pool_table = clan_lounge contains CLAN_POOL_TABLE;
 boolean have_rain_doh = ( available_amount( CAN_OF_RAIN_DOH ) > 0 );
 boolean have_redwood_rain_stick = ( available_amount( REDWOOD_RAIN_STICK ) > 0 );
 boolean have_shower = clan_lounge contains CLAN_SHOWER;
+boolean have_spinning_wheel = campground contains SPINNING_WHEEL || ( available_amount( SPINNING_WHEEL ) > 0 );
 boolean have_spooky_putty = ( available_amount( SPOOKY_PUTTY_SHEET ) > 0 );
 boolean have_swimming_pool = clan_lounge contains CLAN_SWIMMING_POOL;
 boolean have_tea_tree = campground contains TEA_TREE;
 boolean have_timespinner = ( available_amount( TIMESPINNER ) > 0 );
 boolean have_voter_sticker = ( available_amount( I_VOTED_STICKER ) > 0 );
+
+boolean have_workshed_item = ( have_model_train_set || have_spinning_wheel || have_mayo_clinic );
 
 // Available locations
 
@@ -2288,6 +2304,163 @@ string valid_wish( string wish )
     return wish;
 }
 
+// Workshed items to use:
+item workshed1 = NO_ITEM;
+item workshed2 = NO_ITEM;
+
+void configure_workshed_items()
+{
+    // workshed_cycle has been trimmed to contain only items you either have installed or have
+    // available. In the latter case, each has been pulled into inventory, if necessary.
+
+    if (count(workshed_cycle) == 0) {
+	return;
+    }
+
+    boolean can_use_item(item desired, item... items)
+    {
+	foreach n, it in items {
+	    if (desired == it) {
+		return true;
+	    }
+	}
+	return false;
+    }
+
+    boolean wheel = can_use_item( SPINNING_WHEEL, workshed_cycle);
+    boolean clinic = can_use_item( MAYO_CLINIC, workshed_cycle);
+    boolean train = can_use_item( MODEL_TRAIN_SET, workshed_cycle);
+
+    // If we have at least two, decide when to use based on what is currently installed, if either.
+    item current_item = get_workshed();
+    boolean workshed_swapped = get_property("_workshedItemUsed").to_boolean();
+
+    // model train set + spinning wheel
+    if ( train && wheel ) {
+	switch (current_item) {
+	case NO_ITEM:
+	    workshed1 = MODEL_TRAIN_SET;
+	    workshed2 = SPINNING_WHEEL;
+	    break;
+	case MODEL_TRAIN_SET:
+	    workshed1 = MODEL_TRAIN_SET;
+	    workshed2 = workshed_swapped ? MODEL_TRAIN_SET : SPINNING_WHEEL;
+	    break;
+	case SPINNING_WHEEL:
+	    workshed1 = SPINNING_WHEEL;
+	    workshed2 = workshed_swapped ? SPINNING_WHEEL : MODEL_TRAIN_SET;
+	    break;
+	default:
+	    if (!workshed_swapped) {
+		workshed1 = MODEL_TRAIN_SET;
+	    }
+	    break;
+	}
+	return;
+    }
+
+    // model train set + portable Mayo clinic
+    if ( train && clinic ) {
+	switch (current_item) {
+	case NO_ITEM:
+	    workshed1 = MAYO_CLINIC;
+	    workshed2 = MODEL_TRAIN_SET;
+	    break;
+	case MODEL_TRAIN_SET:
+	    workshed1 = MODEL_TRAIN_SET;
+	    workshed2 = workshed_swapped ? MODEL_TRAIN_SET : MAYO_CLINIC;
+	    break;
+	case MAYO_CLINIC:
+	    workshed1 = MAYO_CLINIC;
+	    workshed2 = workshed_swapped ? MAYO_CLINIC : MODEL_TRAIN_SET;
+	    break;
+	default:
+	    if (!workshed_swapped) {
+		workshed1 = MODEL_TRAIN_SET;
+	    }
+	    break;
+	}
+	return;
+    }
+
+    // spinning wheel + portable Mayo clinic
+    if ( wheel && clinic ) {
+	switch (current_item) {
+	case NO_ITEM:
+	    workshed1 = MAYO_CLINIC;
+	    workshed2 = SPINNING_WHEEL;
+	    break;
+	case SPINNING_WHEEL:
+	    workshed1 = SPINNING_WHEEL;
+	    workshed2 = workshed_swapped ? SPINNING_WHEEL : MAYO_CLINIC;
+	    break;
+	case MAYO_CLINIC:
+	    workshed1 = MAYO_CLINIC;
+	    workshed2 = workshed_swapped ? MAYO_CLINIC : SPINNING_WHEEL;
+	    break;
+	default:
+	    if (!workshed_swapped) {
+		// We'll run with whatever was already installed and then install the spinning wheel
+		// at the end of the day.
+		workshed2 = SPINNING_WHEEL;
+	    }
+	    break;
+	}
+	return;
+    }
+
+    // model train set
+    if (train) {
+	// Install model train set before running turns
+	switch (current_item) {
+	case NO_ITEM:
+	case MODEL_TRAIN_SET:
+	    workshed1 = MODEL_TRAIN_SET;
+	    break;
+	default:
+	    if (!workshed_swapped) {
+		workshed1 = MODEL_TRAIN_SET;
+	    }
+	    break;
+	}
+	return;
+    }
+
+    // portable Mayo clinic
+    if (clinic) {
+	// Install portable Mayo clinic before eating
+	switch (current_item) {
+	case NO_ITEM:
+	case MAYO_CLINIC:
+	    workshed1 = MAYO_CLINIC;
+	    break;
+	default:
+	    if (!workshed_swapped) {
+		workshed1 = MAYO_CLINIC;
+	    }
+	    break;
+	}
+	return;
+    }
+
+    // spinning wheel
+    if (wheel) {
+	// Install spinning wheel at end of day, to allow for leveling
+	switch (current_item) {
+	case NO_ITEM:
+	case SPINNING_WHEEL:
+	    workshed2 = SPINNING_WHEEL;
+	    break;
+	default:
+	    if (!workshed_swapped) {
+		workshed2 = SPINNING_WHEEL;
+	    }
+	    break;
+	}
+	return;
+    }
+}
+ 
 // Default familiar: Meat or Item, depending on what you are hunting.
 familiar default_familiar;
 
@@ -2965,6 +3138,28 @@ void validate_configuration()
 	}
     }
 
+    // *** Workshed Items
+    if ( have_workshed_item ) {
+	foreach n, it in workshed_cycle {
+	    if ( !( workshed_items contains it ) ) {
+		print( "VMF.WorkshedCycle: We don't know how to use a " + it + " in your workshed; ignoring." );
+		remove workshed_cycle[ n ];
+		continue;
+	    }
+	    if (campground contains it) {
+		continue;
+	    }
+	    if (available_amount( it ) == 0) {
+		print( "VMF.WorkshedCycle: You don't own a " + it + "; ignoring." );
+		remove workshed_cycle[ n ];
+		continue;
+	    }
+	    retrieve_item( it );
+	}
+	// Configure which (up to) two workshed items we will use
+	configure_workshed_items();
+    }
+
     // *** Horsery Contract
     if ( !( horsery_horses contains horsery_horse ) ) {
 	print( "VMF.HorseryHorse: '" + horsery_horse + "' is not rentable from The Horsery.", "red" );
@@ -3039,11 +3234,6 @@ static item BRAN_MUFFIN = $item[ bran muffin ];
 static item CHOCOLATE_CHIP_MUFFIN = $item[ chocolate chip muffin ];
 static item MUFFIN_TIN = $item[ earthenware muffin tin ];
 static item TWINKLY_WAD = $item[ twinkly wad ];			// cheap 1 spleen toxin
-
-// Mayo Clinic
-static item MAYO_CLINIC = $item[ portable Mayo Clinic ];
-static item MAYOFLEX = $item[ Mayoflex ];
-static item MAYO_MINDER = $item[ Mayo Minder&trade; ];
 
 // Nightcaps
 static item TPS = $item[ tiny plastic sword ];
@@ -3143,7 +3333,7 @@ static {
     }
 }
 
-// Items you canget by consulting with Madame Zatara
+// Items you can get by consulting with Madame Zatara
 static item_set ZATARA_PRIZES = $items[
      // Incompatible word 1
      Swedish massage fish,
@@ -3379,8 +3569,6 @@ boolean have_chateau = get_property( "chateauAvailable" ).to_boolean();
 boolean have_detective_school = get_property( "hasDetectiveSchool" ).to_boolean();
 boolean have_game_grid_token = ( available_amount( GAME_GRID_TOKEN ) > 0 );
 boolean have_lovebugs = get_property( "lovebugsUnlocked" ).to_boolean();
-boolean have_mayo_clinic = campground contains MAYO_CLINIC;
-boolean have_mayo_minder = ( item_amount( MAYO_MINDER ) > 0 );
 boolean have_protonic_accelerator = ( available_amount( PROTONIC_ACCELERATOR_PACK ) > 0 );
 boolean have_psych_jar = ( available_amount( PSYCH_JAR ) > 0 );
 
@@ -3943,6 +4131,13 @@ boolean will_fight_voters()
 
     // We want to fight all monsters, all the time
     return true;
+}
+
+void install_workshed_item( item workshed )
+{
+    if ( workshed != NO_ITEM && workshed != get_workshed() ) {
+	use(1, workshed);
+    }
 }
 
 typedef int organ;
@@ -6662,6 +6857,12 @@ boolean eat_muffin()
 
 void eat_up()
 {
+    // If want to use portable Mayo clinic as first workshed item - i.e. before eating -
+    // now is the time to install it.
+    if ( workshed1 == MAYO_CLINIC ) {
+	install_workshed_item( MAYO_CLINIC );
+    }
+
     int current_full = my_fullness();
     int max_full = fullness_limit();
 
@@ -8329,6 +8530,15 @@ void run_tasks()
     // Cloud Talk gives you +25% stat gains
     visit_getaway_campsite();
 
+    // If spinning wheel is our first workshed item, install it.
+    if ( workshed1 == SPINNING_WHEEL ) {
+	install_workshed_item( SPINNING_WHEEL );
+	// If it is not the second workshed item, harvest it now so the other item can be installed.
+	if ( workshed2 != SPINNING_WHEEL ) {
+	    visit_url("campground.php?action=spinningwheel");
+	}
+    }
+
     // Consume to gain adventures and stats
     eat_up();
     drink_up();
@@ -8385,6 +8595,13 @@ void run_tasks()
     
     // Make a lasts-until-rollover items
     floundry_fabricate();
+
+    // *** Here start potential adventures/fights.
+
+    // Install model train set, if so-configured
+    if ( workshed1 == MODEL_TRAIN_SET || workshed2 == MODEL_TRAIN_SET ) {
+	install_workshed_item( MODEL_TRAIN_SET );
+    }
 
     // The Tunnel of L.O.V.E. does not use turns, and available effects
     // and lasts-until-rollover items might be of interest.
@@ -8510,6 +8727,16 @@ void run_tasks()
 
     // Burn MP at Nunnery
     nuns();
+
+    // Time to install certain second workshed items.
+    switch (workshed2) {
+    case MAYO_CLINIC:
+	// portable Mayo clinic ready to use tomorrow
+    case SPINNING_WHEEL:
+	// spinning wheel ready to use in breakfast
+	install_workshed_item( workshed2 );
+	break;
+    }
 
     // Do breakfast at the end, since the spinning wheel, for example,
     // depends on your level, and you could have leveled up.
