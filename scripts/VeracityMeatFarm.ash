@@ -2069,6 +2069,7 @@ static item MAYOFLEX = $item[ Mayoflex ];
 static item MAYO_MINDER = $item[ Mayo Minder&trade; ];
 static item MIME_ARMY_SHOTGLASS = $item[ mime army shotglass ];
 static item MODEL_TRAIN_SET = $item[ model train set ];
+static item MOLEHILL_MOUNTAIN = $item[ molehill mountain ];
 static item MUMMING_TRUNK = $item[ mumming trunk ];
 static item PHOTOCOPIED_MONSTER = $item[ photocopied monster ];
 static item PLASTIC_VAMPIRE_FANGS = $item[ plastic vampire fangs ];
@@ -2187,12 +2188,13 @@ boolean have_floundry = clan_lounge contains CLAN_FLOUNDRY;
 boolean have_fortune_teller = clan_lounge contains CLAN_FORTUNE_TELLER;
 boolean have_genie_bottle = ( available_amount( GENIE_BOTTLE ) > 0 );
 boolean have_glitch_item = ( item_amount( GLITCH_ITEM ) > 0 );
-boolean have_guzzlr_tablet = ( item_amount( GUZZLR_TABLET ) > 0 );
+boolean have_guzzlr_tablet = ( available_amount( GUZZLR_TABLET ) > 0 );
 boolean have_lounge_key = ( item_amount( LOUNGE_KEY ) > 0 );
 boolean have_mayo_clinic = campground contains MAYO_CLINIC;
 boolean have_mayo_minder = ( item_amount( MAYO_MINDER ) > 0 );
 boolean have_mime_army_shotglass = ( available_amount( MIME_ARMY_SHOTGLASS ) > 0 );
 boolean have_model_train_set = campground contains MODEL_TRAIN_SET || ( available_amount( MODEL_TRAIN_SET ) > 0 );
+boolean have_molehill_mountain = ( available_amount( MOLEHILL_MOUNTAIN ) > 0 );
 boolean have_mumming_trunk = ( available_amount( MUMMING_TRUNK ) > 0 );
 boolean have_plastic_vampire_fangs = ( available_amount( PLASTIC_VAMPIRE_FANGS ) > 0 );
 boolean have_pool_table = clan_lounge contains CLAN_POOL_TABLE;
@@ -2222,6 +2224,7 @@ boolean have_witchess_set = campground contains WITCHESS_SET;
 boolean horsery_available = get_property( "horseryAvailable" ).to_boolean();
 boolean spacegate_available = get_property( "spacegateAlways" ).to_boolean();
 boolean never_ending_party_available = ( get_property( "neverendingPartyAlways" ).to_boolean() || get_property( "_neverendingPartyToday" ).to_boolean() );
+boolean speakeasy_available = get_property( "ownsSpeakeasy" ).to_boolean();
 boolean store_available = have_shop();
 
 // Installed Source Terminal items
@@ -3281,6 +3284,7 @@ static location NINJA_LAIR = $location[ Lair of the Ninja Snowmen ];
 static location PALINDOME = $location[ Inside the Palindome ];
 static location NOOB_CAVE = $location[ Noob Cave ];
 static location SNOJO = $location[ The X-32-F Combat Training Snowman ];
+static location SPEAKEASY = $location[ An Unusually Quiet Barroom Brawl ];
 static location TUNNEL = $location[ The Tunnel of L.O.V.E. ];
 
 static monster TIME_PRANK = $monster[ time-spinner prank ];
@@ -4863,7 +4867,7 @@ void bust_ghost( location paranormal )
 	    outfit( icy_peak_ghost_outfit );
 	}
 
-	boolean ignore = adv1( paranormal, 0, "bust_ghost_filter" );
+	catch adv1( paranormal, 0, "bust_ghost_filter" );
     }
     finally {
 	cli_execute( "outfit checkpoint" );
@@ -6230,6 +6234,43 @@ void nep_fights()
     }
 }
 
+void speakeasy_fights()
+{
+    // It takes a turn to go to adventure.php even if none will be used.
+    if ( !speakeasy_available || my_adventures() == 0 ) {
+	return;
+    }
+
+    // You have only 3 free turns per day. You may want to spend
+    // non-free turns there, but not via this script.
+    int fights = 3 - get_property( "_speakeasyFreeFights" ).to_int();
+    if ( fights <= 0 ) {
+	return;
+    }
+
+    print( "Free fights: " + get_property( "speakeasyName" ) );
+
+    // Go for items.
+    suit_up( SPEAKEASY, item_familiar, false );
+
+    while ( fights > 0 && my_adventures() > 0 ) {
+	between_battle_checks();
+	string page = visit_url( SPEAKEASY.to_url() );
+	if ( page.contains_text( "fight.php" ) ) {
+	    combat_filter_setup( SPEAKEASY );
+	    run_combat( "default_filter" );
+	    fights--;
+	} else {
+	    // Turtle taming or ghost dog?
+	    // Does not consume a turn
+	    run_choice( -1 );
+	}
+
+	// If we detected paranormal activity after that fight, may as well bust the ghost now.
+	bust_ghost();
+    }
+}
+
 void god_lobster_fights()
 {
     if ( !have_god_lobster ) {
@@ -6322,12 +6363,35 @@ void glitch_item_fight()
     }
 }
 
+void molehill_mountain_fight()
+{
+    if ( !have_molehill_mountain || get_property( "_molehillMountainUsed" ).to_boolean() ) {
+	return;
+    }
+
+    // Pull it into inventory
+    retrieve_item( 1, MOLEHILL_MOUNTAIN );
+
+    // Use it and fight a Moleman
+    between_battle_checks();
+    combat_filter_setup( NO_LOCATION );
+    string page = visit_url( "inv_use.php?whichitem=" + MOLEHILL_MOUNTAIN.to_int() );
+    // We should be in a fight unless we are out of sync with KoL.
+    if ( page.contains_text( "fight.php" ) ) {
+	// Assume that the CCS can handle this fight
+	run_combat();
+    }
+}
+
 void run_free_fights()
 {
     // You need an adventure available even for free fights
     if ( my_adventures() == 0 ) {
 	return;
     }
+
+    // Fight some Eldritch Tentacles, which drop items but no meat
+    fight_eldritch_tentacles();
 
     // Witchess can be done while falling-down drunk
     witchess_fights();
@@ -6346,13 +6410,22 @@ void run_free_fights()
     // The Snojo uses adventure.php but is not interrupted by wanderers.
     snojo_fights();
 
+    // The Neverending Party use adventure.php. The free fights can (will)
+    // be interrupted by a choice adventure that can lead to a free fight.
+    nep_fights();
+
+    // 3 free fights per day at An Unusually Quiet Barroom Brawl
+    speakeasy_fights();
+
+    // 1 free fight per day with Moleman by using molehill mountain
+    molehill_mountain_fight();
+
+    // Accept Rufus quest and fulfill in Shadow Rift
+
     // The Deep Machine Tunnels use adventure.php. The free fights can
     // be interrupted by a choice adventure that takes a turn.
+    // Therefore, do this last.
     dmt_fights();
-
-    // The Neverending Party use adventure.php. The free fights can
-    // (will) be interrupted by a choice adventure that can lead to a fight
-    nep_fights();
 }
 
 void cheat_deck()
@@ -7723,7 +7796,7 @@ void make_wads()
 
     int casts = 3 - get_property( "prismaticSummons" ).to_int();
     if ( casts > 0 ) {
-	boolean ignore = use_skill( casts, RAINBOW_GRAVITATION );
+	catch use_skill( casts, RAINBOW_GRAVITATION );
     }
 }
 
@@ -8413,12 +8486,8 @@ void handle_guzzlr()
 	return;
     }
 
-    // If you have made 36 or more Guzzler platinum deliveries, you've maxed
-    // out the MP regen from your tablet.
-
-    if ( get_property( "guzzlrPlatinumDeliveries" ).to_int() < 36 ) {
-	return;
-    }
+    // Pull it into inventory
+    retrieve_item( 1, GUZZLR_TABLET );
 
     // You can only do this once per day
     if ( get_property( "_guzzlrPlatinumDeliveries" ).to_int() > 0 ) {
@@ -8607,10 +8676,6 @@ void run_tasks()
     // and lasts-until-rollover items might be of interest.
     use_tunnel_of_love();
 
-    // The Boxing Daycare might use turns and might provide useful
-    // farming buffs
-    visit_boxing_daycare();
-
     // A VYKEA companion can help with item drops
     create_vykea_companion();
 
@@ -8621,8 +8686,12 @@ void run_tasks()
     // Free fights will not advance the counter for dropping a special song item.
     play_boombox_song();
 
-    // Fight some Eldritch Tentacles, which drop items but no meat
-    fight_eldritch_tentacles();
+    // *** Free fights
+    run_free_fights();
+
+    // The Boxing Daycare might use turns and might provide useful
+    // farming buffs
+    visit_boxing_daycare();
 
     // Optionally adventure in the Gingerbread City to collect sprinkles
     // and/or farm items. Do this before getting effects which improve
@@ -8653,9 +8722,6 @@ void run_tasks()
     // *** execute our mood here? Need better mood support.
     platinum_yendorian_express_card();
     license_to_chill();
-
-    // Run free fights
-    run_free_fights();
 
     // Fax in, copy, and fight a monster, which might have desirable
     // Meat or item drops. It might also be a free fight.
