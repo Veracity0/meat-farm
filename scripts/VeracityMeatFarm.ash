@@ -98,6 +98,9 @@ import <vcon.ash>
 // Gingerbread City		Veracity's Gingerbread City
 //				https://kolmafia.us/showthread.php?21609
 //				veracity0-gingerbread
+// Shadow Rift			Veracity's ShadowRift
+//				https://kolmafia.us/threads/shadowrift.28812
+//				veracity0-shadow-rift
 // Spacegate			Veracity's Spacegate
 //				https://kolmafia.us/showthread.php?23335
 //				veracity0-spacegate
@@ -150,6 +153,8 @@ import <vcon.ash>
 // --> Will swim in the swimming pool (configurable)
 // --> Will use pool table (configurable)
 // --> Will consult with fortune teller (configurable)
+// Closed-circuit pay phone
+// --> Will run (turn free) errands for Rufus (configurable/optional)
 // Deck of Every Card
 // --> Will cheat cards (configurable)
 // Deluxe Fax Machine
@@ -609,6 +614,44 @@ boolean consult_with_cheesefax = define_property( "VMF.ConsultWithCheeseFax", "b
 
 effect swimming_pool = define_property( "VMF.SwimmingPool", "effect", "" ).to_effect();
 
+// *** closed-circuit pay phone ***
+
+// If you want to perform daily tasks for Rufus every day -- up to 11 free combats and a reward -
+// specify one or two commands to pass to Veracity's ShadowRift script.
+//
+// Try "ShadowRift help" to see your options.
+//
+// The script will maximize your equipment for item drop.
+// You can specify additional required equipment or desired modifier
+// parameters if you wish via a setting in the Shadow Rift script.
+//
+// You must set uo your CCS (via a consult script, perhaps) to handle
+// any combats that you may encounter during your exploration.
+//
+// This script will invoke ShadowRift.ash up to three times:
+//
+// 1) ShadowRift check
+// -> visits Rufus to see what he's looking for. ITEM <- the shadow items he wants
+// 2) ShadowRift items ITEM waters onlyfree buy notallfree
+// -> accepts the "items" quest and fulfills it using ITEM from inventory or the mall.
+// -> You now have 11 turns of Shadow Affinity and 30 turns of Shadow Waters (Init/Meat/Items +100)
+// 3) ShadowRift artifact ITEM forest onlyfree allfree
+// -> Uses up 11 turns of Shadow Affinity.
+// -> Possibly gain a shadow item from each free fight.
+// -> Gains 2-3 of 3 different shadow items, including the one you spent.
+//
+// Net result: 10 free fights (stats/items/Meat), spent 3 items to gain 6-9 items, 30 turns of useful buff.
+//
+// Potential ways to customize:
+//
+// 1) No Shadow Rift automation? Set the two properties to "".
+// 2) No buying items? Set the first property to "" and change ITEM in the second to "random" (or your choice of rift).
+// 3) No items and get buff, not items? See 2, and also change "forest" to "waters".
+// 4) Your CCS can reliably kill a shadow boss? Change "artifact" to "entity".
+
+string shadow_rift_command1 = define_property( "VMF.ShadowRiftCommand", "string", "items ITEM waters buy onlyfree notallfree" );
+string shadow_rift_command2 = define_property( "VMF.ShadowRiftCommand", "string", "artifact ITEM forest onlyfree allfree" );
+
 // *** cosmic bowling ball ***
 
 // Using the combat skill "Bowl Straight Up" removes the ball from
@@ -974,6 +1017,10 @@ effect synthesis_target = define_property( "VMF.SynthesisEffect", "effect", "Syn
 
 boolean synthesis_prefers_available = define_property( "VMF.SynthesisPrefersAvailable", "boolean", "false" ).to_boolean();
 
+// Should we always do one Item Drop synthesis so that it is in effect for free fights?
+
+boolean synthesize_item_drop_for_free_fights = define_property( "VMF.SynthesizeItemDropForFreeFights", "boolean", "true" ).to_boolean();
+
 // *** That 70s Volcano *****
 
 // What to do in the Towering Inferno Discotheque:
@@ -1212,6 +1259,11 @@ static string_list garden_harvester_scripts = {
 // *** Gingerbread City*******
 static string_list gingerbread_scripts = {
     "veracity0-gingerbread"
+};
+
+// *** Shadow Rift ***********
+static string_list shadow_rift_scripts = {
+    "veracity0-shadow-rift"
 };
 
 // *** Spacegate  ************
@@ -2055,6 +2107,7 @@ static item CLAN_FORTUNE_TELLER = $item[ Clan Carnival Game ];
 static item CLAN_POOL_TABLE = $item[ Clan pool table ];
 static item CLAN_SHOWER = $item[ Clan shower ];
 static item CLAN_SWIMMING_POOL = $item[ Olympic-sized Clan crate ];
+static item CLOSED_CIRCUIT_PAY_PHONE = $item[ closed-circuit pay phone ];
 static item COSMIC_BOWLING_BALL = $item[ cosmic bowling ball ];
 static item DECK = $item[ Deck of Every Card ];
 static item DINSEY_TICKET = $item[ one-day ticket to Dinseylandfill ];
@@ -2181,6 +2234,7 @@ boolean have_battalion = ( available_amount( BASTILLE_BATTALION ) > 0 );
 boolean have_beach_comb = ( available_amount( BEACH_COMB ) > 0 );
 boolean have_black_box = ( available_amount( RAIN_DOH_BLACK_BOX ) > 0 );
 boolean have_boombox = ( available_amount( SONGBOOM_BOOMBOX ) > 0 );
+boolean have_closed_circuit_pay_phone = ( available_amount( CLOSED_CIRCUIT_PAY_PHONE ) > 0 );
 boolean have_deck = ( available_amount( DECK ) > 0 );
 boolean have_dinsey_ticket = ( available_amount( DINSEY_TICKET ) > 0 );
 boolean have_fax_machine = clan_lounge contains CLAN_FAX_MACHINE;
@@ -6383,12 +6437,86 @@ void molehill_mountain_fight()
     }
 }
 
+void rufus_quest()
+{
+    // If don't have a command, nothing to do
+    if ( shadow_rift_command1 == "" && shadow_rift_command2 == "" ) {
+	return;
+    }
+
+    // If we don't have a closed-circuit pay phone, can't do this.
+    if ( !have_closed_circuit_pay_phone ) {
+	return;
+    }
+
+    // If we haven't installed ShadowRift.ash, can't do this
+    if ( !check_installed( shadow_rift_scripts ) ) {
+	return;
+    }
+
+    // If we have already gotten Shadow Affinity today - which provides
+    // 11 free combats in the Shadow Rift - subsequent visits will take
+    // turns. Don't do that.
+    if (get_property("_shadowAffinityToday").to_boolean()) {
+	return;
+    }
+
+    // If/when the ShadowRift script handles Drunkula's wine glass,
+    // rethink this check.
+    if ( my_inebriety() > inebriety_limit() ) {
+	return;
+    }
+
+    print( "Adventuring in the Shadow Rift" );
+
+    // Pull pay phone into inventory
+    retrieve_item( 1, CLOSED_CIRCUIT_PAY_PHONE );
+
+    if (get_property("questRufus") != "unstarted") {
+	// Print current state of quest.
+	cli_execute("call ShadowRift check");
+	print("This script can't handle in-progress quests; skipping.", "red");
+	return;
+    }
+
+    // Switch to item drop familiar
+    use_familiar( item_familiar );
+
+    // If we want to select rift based on particular item, see what Rufus is looking for.
+    if ( shadow_rift_command1.contains_text("ITEM") ||
+	 shadow_rift_command2.contains_text("ITEM")) {
+	cli_execute("call ShadowRift check");
+	string desired = get_property("rufusDesiredItems");
+	shadow_rift_command1 = replace_string(shadow_rift_command1, "ITEM", desired);
+	shadow_rift_command2 = replace_string(shadow_rift_command2, "ITEM", desired);
+    }
+
+    // Run the script up to two more times
+    if ( shadow_rift_command1 != "" ) {
+	cli_execute("call ShadowRift " + shadow_rift_command1 );
+    }
+    if ( shadow_rift_command2 != "" ) {
+	cli_execute("call ShadowRift " + shadow_rift_command2 );
+    }
+
+    // If we detected paranormal activity in a Shadow Rift, may as well bust the ghost now.
+    bust_ghost();
+}
+
 void run_free_fights()
 {
     // You need an adventure available even for free fights
     if ( my_adventures() == 0 ) {
 	return;
     }
+
+    // Accept quests from Rufus and fulfill in Shadow Rift
+    // Do this first, as it can yield 30 turns of Shadow Waters,
+    // which grants Item Drop: +100 and Meat Drop: +100
+    // 
+    // This can be done while falling-down drunk with Drunkula's wine
+    // glass - assuming the ShadowRift script can handle that.
+    rufus_quest();
 
     // Fight some Eldritch Tentacles, which drop items but no meat
     fight_eldritch_tentacles();
@@ -6419,8 +6547,6 @@ void run_free_fights()
 
     // 1 free fight per day with Moleman by using molehill mountain
     molehill_mountain_fight();
-
-    // Accept Rufus quest and fulfill in Shadow Rift
 
     // The Deep Machine Tunnels use adventure.php. The free fights can
     // be interrupted by a choice adventure that takes a turn.
@@ -7130,6 +7256,9 @@ void spleen_up()
     // Getting abstraction: comprehension from the choice adventure in the Deep Machine Tunnels
     // Spacing out calls to Calculate the Universe, if needed
 
+    boolean will_synthesize_collection =
+	can_synthesize &&
+	synthesize_item_drop_for_free_fights;
     boolean will_synthesize =
 	can_synthesize &&
 	synthesis_target != NO_EFFECT;
@@ -7141,14 +7270,22 @@ void spleen_up()
 
     void use_spleen( int spleen, boolean fill )
     {
+	// Flags = 1 to choose "available" candies vs. "cheap" candies
+	int flags = synthesis_prefers_available ? 1 : 0;
+
+	// Synthesize Item Drop once for free fights?
+	if ( will_synthesize_collection ) {
+	    sweet_synthesis( 1, SYNTHESIS_COLLECTION, flags );
+	    spleen--;
+	    will_synthesize_collection = false;
+	}
+
 	// Synthesize to get configured farming effect
-	if ( will_synthesize ) {
+	if ( will_synthesize && spleen > 0) {
 	    int turns_remaining = my_adventures();
 	    int current_effect = have_effect( synthesis_target );
 	    // Fudge factor: +2 to accomodate extra turns from Pantsgiving
 	    int synthesis_casts = min( spleen, ( turns_remaining - current_effect + 2 + 29 ) / 30 );
-	    // Flags = 1 to choose "available" candies vs. "cheap" candies
-	    int flags = synthesis_prefers_available ? 1 : 0;
 	    // Do it one cast at a time, since candy costs can vary widely
 	    // *** In r26018, sweet_synthesis() does this itself
 	    sweet_synthesis( synthesis_casts, synthesis_target, flags );
@@ -7184,7 +7321,7 @@ void spleen_up()
 
     print( "Poisoning your spleen" );
 
-    if ( will_synthesize ) {
+    if ( will_synthesize || will_synthesize_collection ) {
 	print( "Priming mall prices for all candy." );
 	update_candy_prices();
     }
