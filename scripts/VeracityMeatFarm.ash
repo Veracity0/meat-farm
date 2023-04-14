@@ -649,8 +649,8 @@ effect swimming_pool = define_property( "VMF.SwimmingPool", "effect", "" ).to_ef
 // 3) No items and get buff, not items? See 2, and also change "forest" to "waters".
 // 4) Your CCS can reliably kill a shadow boss? Change "artifact" to "entity".
 
-string shadow_rift_command1 = define_property( "VMF.ShadowRiftCommand", "string", "items ITEM waters buy onlyfree notallfree" );
-string shadow_rift_command2 = define_property( "VMF.ShadowRiftCommand", "string", "artifact ITEM forest onlyfree allfree" );
+string shadow_rift_command1 = define_property( "VMF.ShadowRiftCommand1", "string", "items ITEM waters buy onlyfree notallfree" );
+string shadow_rift_command2 = define_property( "VMF.ShadowRiftCommand2", "string", "artifact ITEM forest onlyfree allfree" );
 
 // *** cosmic bowling ball ***
 
@@ -8830,14 +8830,13 @@ void run_tasks()
     // farming buffs
     visit_boxing_daycare();
 
-    // Optionally adventure in the Gingerbread City to collect sprinkles
-    // and/or farm items. Do this before getting effects which improve
-    // Meat Drop, since no Meat drops there.
-    use_gingerbread_city();
-
-    // Optionally adventure Through the Spacegate.
-    // No Meat drops there.
+    // Optionally adventure Through the Spacegate. For science!
+    // No Meat drops there, although rare and/or expensive items do.
     explore_spacegate();
+
+    // Optionally adventure in the Gingerbread City for sprinkles and/or items.
+    // No Meat drops there.
+    use_gingerbread_city();
 
     // Optionally spend turns combing the beach
     comb_beach();
