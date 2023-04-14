@@ -2114,6 +2114,7 @@ static item DINSEY_TICKET = $item[ one-day ticket to Dinseylandfill ];
 static item ETCHED_HOURGLASS = $item[ etched hourglass ];
 static item GENIE_BOTTLE = $item[ genie bottle ];
 static item GLITCH_ITEM = $item[ [glitch season reward name] ];
+static item GOVERNMENT_PER_DIEM = $item[ government per-diem ];
 static item GUZZLR_TABLET = $item[ Guzzlr tablet ];
 static item I_VOTED_STICKER = $item[ &quot;I Voted!&quot; sticker ];
 static item LOUNGE_KEY = $item[ Clan VIP Lounge key ];
@@ -7707,6 +7708,13 @@ void sell_adventure_loot()
 	autosell_all_but( it, 0 );
     }
     batch_close();
+
+    // If you you have a government per-diem, use it.
+    if ( available_amount( GOVERNMENT_PER_DIEM ) > 0 &&
+	 !get_property( "_governmentPerDiemUsed" ).to_boolean() ) {
+	retrieve_item( 1, GOVERNMENT_PER_DIEM );
+	use( 1, GOVERNMENT_PER_DIEM );
+    }
 }
 
 void tea_tree()
@@ -8823,7 +8831,14 @@ void run_tasks()
     // Free fights will not advance the counter for dropping a special song item.
     play_boombox_song();
 
-    // *** Free fights
+    // If case we are using a Robortender for item drop, lubricate it
+    // before running free fights
+    if ( my_inebriety() <= inebriety_limit() &&
+	 my_adventures() > 0 ) {
+	// Lubricate Robortender, if necessary
+	lubricate_robortender();
+    }
+
     run_free_fights();
 
     // The Boxing Daycare might use turns and might provide useful
@@ -8882,9 +8897,6 @@ void run_tasks()
 
 	// Prepare to adventure
 	prepare_to_adventure();
-
-	// Lubricate Robortender, if necessary
-	lubricate_robortender();
 
 	// *** farm! ***
 
