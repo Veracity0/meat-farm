@@ -674,7 +674,7 @@ string shadow_rift_command2 = define_property( "VMF.ShadowRiftCommand2", "string
 //
 // If you list fewer than five, the last one listed will be repeated until you run out.
 
-string_list monkey_paw_wishes = define_property( "VMF.MonketPawWishes", "string", "", "list" );
+string_list monkey_paw_wishes = define_property( "VMF.MonkeyPawWishes", "string", "", "list" );
 
 // *** Deck of Every Card ****
 
