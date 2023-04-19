@@ -26,7 +26,8 @@ import <vcon.ash>
 // Bug: Verify that VMF.FamiliarEquipment is a universal item
 // Bug: Require SOME mood to be set, at least
 // Bug: Require SOME recovery to be set, at least
-// Bug: Complete valid_wish();
+// Bug: Complete valid_genie_wish();
+// Bug: Complete valid_monkey_paw_wish();
 // Bug: Don't suit up in cheat_deck or genie_wishes unless will fight a monster
 //
 // Voting Booth:
@@ -155,6 +156,8 @@ import <vcon.ash>
 // --> Will consult with fortune teller (configurable)
 // Closed-circuit pay phone
 // --> Will run (turn free) errands for Rufus (configurable/optional)
+// Cursed Monkey's Paw
+// --> Will ask for wishes (configurable)
 // Deck of Every Card
 // --> Will cheat cards (configurable)
 // Deluxe Fax Machine
@@ -657,6 +660,21 @@ string shadow_rift_command2 = define_property( "VMF.ShadowRiftCommand2", "string
 // Using the combat skill "Bowl Straight Up" removes the ball from
 // inventory for a while but grants the effect "Cosmic Ball in the Air",
 // which is Meat Drop +50% and Item Drop +25%.
+
+// *** cursed monkey's paw *****
+
+// Which wishes to request
+//
+// List up to five wishes, separated by "|".
+// Each wish can be:
+//
+//   item ITEM
+//   effect EFFECT
+//   wish WISH
+//
+// If you list fewer than five, the last one listed will be repeated until you run out.
+
+string_list monkey_paw_wishes = define_property( "VMF.MonketPawWishes", "string", "", "list" );
 
 // *** Deck of Every Card ****
 
@@ -2109,6 +2127,7 @@ static item CLAN_SHOWER = $item[ Clan shower ];
 static item CLAN_SWIMMING_POOL = $item[ Olympic-sized Clan crate ];
 static item CLOSED_CIRCUIT_PAY_PHONE = $item[ closed-circuit pay phone ];
 static item COSMIC_BOWLING_BALL = $item[ cosmic bowling ball ];
+static item CURSED_MONKEY_PAW = $item[ cursed monkey's paw ];
 static item DECK = $item[ Deck of Every Card ];
 static item DINSEY_TICKET = $item[ one-day ticket to Dinseylandfill ];
 static item ETCHED_HOURGLASS = $item[ etched hourglass ];
@@ -2236,6 +2255,7 @@ boolean have_beach_comb = ( available_amount( BEACH_COMB ) > 0 );
 boolean have_black_box = ( available_amount( RAIN_DOH_BLACK_BOX ) > 0 );
 boolean have_boombox = ( available_amount( SONGBOOM_BOOMBOX ) > 0 );
 boolean have_closed_circuit_pay_phone = ( available_amount( CLOSED_CIRCUIT_PAY_PHONE ) > 0 );
+boolean have_cursed_monkey_paw = ( available_amount( CURSED_MONKEY_PAW ) > 0 );
 boolean have_deck = ( available_amount( DECK ) > 0 );
 boolean have_dinsey_ticket = ( available_amount( DINSEY_TICKET ) > 0 );
 boolean have_fax_machine = clan_lounge contains CLAN_FAX_MACHINE;
@@ -2356,8 +2376,20 @@ boolean available_hat( int hat_length )
 }
 
 // Utility to validate genie wishes
-string valid_wish( string wish )
+string valid_genie_wish( string wish )
 {
+    // *** TBD
+    return wish;
+}
+
+// Utility to validate monkey paw wishes
+string valid_monkey_paw_wish( string wish )
+{
+    if ( !wish.starts_with("item ") &&
+	 !wish.starts_with("effect ") &&
+	 !wish.starts_with("wish ") ) {
+	return "";
+    }
     // *** TBD
     return wish;
 }
@@ -2845,6 +2877,27 @@ void validate_configuration()
 	}
     }
 
+    // *** Cursed Monkey Paw
+    if ( have_cursed_monkey_paw ) {
+	boolean changed = false;
+	foreach n, wish in monkey_paw_wishes {
+	    string name = valid_monkey_paw_wish( wish );
+	    if ( name == "" ) {
+		print( "VMF.MonkeyPawWishes: '" + wish + "' is not an unambiguously valid wish.", "red" );
+		valid = false;
+	    } else if ( name != wish ) {
+		print( "VMF.MonkeyPawWishes: '" + wish + "' disambiguates to '" + name + "'." );
+		monkey_paw_wishes[ n ] = name;
+		changed = true;
+	    }
+	}
+
+	// Save with disambiguated names
+	if ( changed ) {
+	    set_property( "VMF.MonkiePawWishes", monkey_paw_wishes.to_string() );
+	}
+    }
+
     // *** Deck of Every Card
     if ( have_deck ) {
 	boolean changed = false;
@@ -2897,7 +2950,7 @@ void validate_configuration()
     if ( have_genie_bottle ) {
 	boolean changed = false;
 	foreach n, wish in genie_wishes {
-	    string name = valid_wish( wish );
+	    string name = valid_genie_wish( wish );
 	    if ( name == "" ) {
 		print( "VMF.GenieWishes: '" + wish + "' is not an unambiguously valid wish.", "red" );
 		valid = false;
@@ -6635,6 +6688,48 @@ void genie_wishes()
     }
 }
 
+void monkey_paw_wishes()
+{
+    if ( !have_cursed_monkey_paw ) {
+	return;
+    }
+
+    // If no wishes are configured, nothing to do
+    if ( count( monkey_paw_wishes ) == 0) {
+	return;
+    }
+
+    // See how many wishes are available today
+    int available = 5 - get_property( "_monkeyPawWishesUsed" ).to_int();
+    if ( available <= 0 ) {
+	return;
+    }
+
+    // You can use the monkey paw if it is equipped.
+    // If it is not equipped, pull into inventory
+    if ( !have_equipped( CURSED_MONKEY_PAW ) ) {
+	retrieve_item( 1, CURSED_MONKEY_PAW );
+    }
+
+    // Ask the monkey paw for wishes
+    string last_wish = "";
+    foreach i, wish in monkey_paw_wishes {
+	print("Asking the cursed monkey's paw for '" + wish + "'");
+	cli_execute( "monkeypaw " + wish );
+	last_wish = wish;
+	if ( --available == 0 ) {
+	    return;
+	}
+    }
+
+    // We ran out of wishes without using up all the charges.
+    // Use up the charges with the last wish requested.
+    while ( available-- > 0 ) {
+	print("Asking the cursed monkey's paw for '" + last_wish + "'");
+	cli_execute("monkeypaw " + last_wish);
+    }
+}
+
 void time_pranks( int minutes_left )
 {
     if ( minutes_left <= 0 ) {
@@ -8838,6 +8933,10 @@ void run_tasks()
 	// Lubricate Robortender, if necessary
 	lubricate_robortender();
     }
+
+    // Ask the cursed monkey paw for wishes. This will not include fighting monsters,
+    // unlike the genie, but might include getting useful effects.
+    monkey_paw_wishes();
 
     run_free_fights();
 
