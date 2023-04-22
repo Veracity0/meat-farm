@@ -688,6 +688,13 @@ string_list deck_cards = define_property( "VMF.DeckCards", "string", "Island|Anc
 
 monster fax_monster = define_property( "VMF.FaxMonster", "monster", "Knob Goblin Embezzler" ).to_monster();
 
+// Reason for faxing monster
+//
+//   meat		Before running regular turns with meat drop effects active
+//   items		After free fights with item drop effects active
+
+string fax_goal = define_property( "VMF.FaxGoal", "string", "meat" );
+
 // Items to use to make additional copies of faxed monster
 
 boolean use_rain_doh = define_property( "VMF.UseRainDoh", "boolean", "true" ).to_boolean();
@@ -2818,6 +2825,10 @@ void validate_configuration()
 	// VMF.UseRainDoh
 	// VMF.UseSpookyPutty
 	// -> no validation needed
+	if ( !( farm_options contains fax_goal ) ) {
+	    print( "VMF.FaxGoal: '" + fax_goal + "' must be 'meat' or 'items'.", "red" );
+	    valid = false;
+	}
     }
 
     // *** Clan Floundry
@@ -8555,6 +8566,65 @@ void consult_with_madame_zatara()
     }
 }
 
+boolean get_fax( monster enemy )
+{
+    boolean check_fax()
+    {
+	if ( item_amount(PHOTOCOPIED_MONSTER) == 0 ) {
+	    receive_fax();
+	}
+
+	if ( get_property("photocopyMonster") == enemy.to_string() ) {
+	    return true;
+	}
+
+	// We got the wrong monster. Clear it.
+	send_fax();
+
+	return false;
+    }
+
+    boolean get_fax( string faxbot )
+    {
+	print( "Trying to get " + enemy + " from " + faxbot + "..." );
+	chat_private( faxbot, enemy.to_string() );
+
+	// Give the faxbot 30 seconds to respond.
+	// Check every 5 seconds.
+	for ( int i = 0; i < 6; i++ ) {
+	    waitq( 5 );
+	    if ( check_fax() ) {
+		print( faxbot + " sent us a " + enemy );
+		return true;
+	    }
+	}
+
+	print( faxbot + " did not give us the monster we asked for." );
+	return false;
+    }
+
+    // If we already have a photocopied monster, perhaps it is the one we want
+    if ( item_amount(PHOTOCOPIED_MONSTER) != 0) {
+	if ( get_property("photocopyMonster").to_monster() == enemy ) {
+	    return true;
+	}
+
+	// Not our target. Dispose of it.
+	send_fax();
+    }
+
+    if ( get_fax( "cheesefax" ) ) {
+	return true;
+    }
+
+    if ( get_fax( "easyfax" ) ) {
+	return true;
+    }
+
+    print( "Unable to fax in a " + enemy + ". Are you sure it is in the fax network?" );
+    return false;
+}
+
 void fax_monster()
 {
     if ( !have_clan || !have_lounge_key || !have_fax_machine ) {
@@ -8572,16 +8642,11 @@ void fax_monster()
 
     print( "Requesting a fax" );
 
-    // Chat must be open to receive a fax.
-    print( "*** chat must remain open until your fax is received ***" );
-    cli_execute( "chat" );
-    waitq( 5 );		// Wait a bit to allow time for the frame to open
-
-    if ( !faxbot( fax_monster ) ) {
+    if ( !get_fax( fax_monster ) ) {
 	print( "Unable to fax monster '" + fax_monster + "'." );
 	return;
     }
-
+ 
     // Use the desired familiar. If none specified, use farming familiar
     familiar fax_familiar = summoned_monster_familiar();
 
@@ -8938,7 +9003,14 @@ void run_tasks()
     // unlike the genie, but might include getting useful effects.
     monkey_paw_wishes();
 
+    // Run configured free fights.
     run_free_fights();
+
+    // Fax in, copy, and fight a monster which might have desirable item
+    // drops. It might also be a free fight.
+    if ( fax_goal == "items" ) {
+	fax_monster();
+    }
 
     // The Boxing Daycare might use turns and might provide useful
     // farming buffs
@@ -8973,9 +9045,11 @@ void run_tasks()
     platinum_yendorian_express_card();
     license_to_chill();
 
-    // Fax in, copy, and fight a monster, which might have desirable
-    // Meat or item drops. It might also be a free fight.
-    fax_monster();
+    // Fax in, copy, and fight a monster which might have desirable Meat
+    // drops. It might also be a free fight.
+    if ( fax_goal == "meat" ) {
+	fax_monster();
+    }
 
     // Ask the genie for wishes. This might include fighting monsters
     genie_wishes();
