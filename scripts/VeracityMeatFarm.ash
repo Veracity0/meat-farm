@@ -8631,6 +8631,11 @@ void fax_monster()
 	return;
     }
 
+    // You request a fax by sending a chat message to a faxbot
+    if ( !get_property( "chatLiterate" ).to_boolean() ) {
+	return;
+    }
+
     if ( fax_monster == NO_MONSTER || get_property( "_photocopyUsed" ).to_boolean() ) {
 	return;
     }
