@@ -1,5 +1,5 @@
 script <VMF>;
-since r26135;
+since r27371;
 
 import <vprops.ash>;
 import <vcon.ash>
@@ -269,11 +269,6 @@ typedef int [string] string_to_int_map;	// goldens, etc.
 //
 // All properties used directly by this script start with "VMF."
 //-------------------------------------------------------------------------
-
-// Whether or not to exit after doing all the prep work and "free" actions.
-// If you want to farm Crimbo, say, set this to false.
-
-boolean run_turns = define_property( "VMF.RunTurns", "boolean", "true" ).to_boolean();
 
 // What kind of farming are we doing?
 //
@@ -1248,10 +1243,282 @@ string velvet_outfit = define_property( "VMF.VelvetOutfit", "string", "Velvet" )
 string farm_outfit = define_property( "VMF.DefaultOutfit", "string", "Meat Drop" );
 string item_outfit = define_property( "VMF.ItemDropOutfit", "string", "Item Drop" );
 
-// Cumulative records. Not configurable.
+// ***************************
+// *   Cumulative Records    *
+// ***************************
+
+// These are VMF properties but are not configurable.
 
 static string MEAT_SETTING = "VMF.TotalMeat";
 static string TURN_SETTING = "VMF.TotalTurns";
+
+// ***************************
+// *  Data Type Constants    *
+// ***************************
+
+static class NO_CLASS = $class[ none ];
+static effect NO_EFFECT = $effect[ none ];
+static familiar NO_FAMILIAR = $familiar[ none ];
+static item NO_ITEM = $item[ none ];
+static location NO_LOCATION = $location[ none ];
+static monster NO_MONSTER = $monster[ none ];
+static slot NO_SLOT = $slot[ none ];
+static stat NO_STAT = $stat[ none ];
+static vykea NO_VYKEA = $vykea[ none ];
+
+// *** Effects ***********
+
+static effect SYNTHESIS_COLLECTION = $effect[ Synthesis: Collection ];
+static effect SYNTHESIS_GREED = $effect[ Synthesis: Greed ];
+
+// *** Familiars *********
+
+static familiar BABY_GRAVY_FAIRY = $familiar[ Baby Gravy Fairy ];
+static familiar CHOCOLATE_LAB = $familiar[ Chocolate Lab ];
+static familiar CORNBEEFADON = $familiar[ Cornbeefadon ];
+static familiar GOD_LOBSTER = $familiar[ God Lobster ];
+static familiar HOBO_MONKEY = $familiar[ Hobo Monkey ];
+static familiar JUMPSUITED_HOUND_DOG = $familiar[ Jumpsuited Hound Dog ];
+static familiar LEPRECHAUN = $familiar[ Leprechaun ];
+static familiar MACHINE_ELF = $familiar[ Machine Elf ];
+static familiar ROBORTENDER = $familiar[ Robortender ];
+static familiar SPACE_JELLYFISH = $familiar[ Space Jellyfish ];
+static familiar STOOPER = $familiar[ Stooper ];
+static familiar TOT = $familiar[ Trick-or-Treating Tot ];
+
+// *** Items *************
+
+static item AMULET_COIN = $item[ amulet coin ];
+static item BASTILLE_BATTALION = $item[ Bastille Battalion control rig ];
+static item BARTEND_SWITCH = $item[ toggle switch (Bartend) ];
+static item BEACH_COMB = $item[ Beach Comb ];
+static item BOUNCE_SWITCH = $item[ toggle switch (Bounce) ];
+static item BOX_FULL_OF_MONSTER = $item[ Rain-Doh box full of monster ];
+static item CAN_OF_RAIN_DOH = $item[ can of Rain-Doh ];
+static item CLAN_FAX_MACHINE = $item[ deluxe fax machine ];
+static item CLAN_FLOUNDRY = $item[ Clan Floundry ];
+static item CLAN_FORTUNE_TELLER = $item[ Clan Carnival Game ];
+static item CLAN_POOL_TABLE = $item[ Clan pool table ];
+static item CLAN_SHOWER = $item[ Clan shower ];
+static item CLAN_SWIMMING_POOL = $item[ Olympic-sized Clan crate ];
+static item CLOSED_CIRCUIT_PAY_PHONE = $item[ closed-circuit pay phone ];
+static item COSMIC_BOWLING_BALL = $item[ cosmic bowling ball ];
+static item CURSED_MONKEY_PAW = $item[ cursed monkey's paw ];
+static item DECK = $item[ Deck of Every Card ];
+static item DINSEY_TICKET = $item[ one-day ticket to Dinseylandfill ];
+static item ETCHED_HOURGLASS = $item[ etched hourglass ];
+static item GENIE_BOTTLE = $item[ genie bottle ];
+static item GLITCH_ITEM = $item[ [glitch season reward name] ];
+static item GOVERNMENT_PER_DIEM = $item[ government per-diem ];
+static item GUZZLR_TABLET = $item[ Guzzlr tablet ];
+static item I_VOTED_STICKER = $item[ &quot;I Voted!&quot; sticker ];
+static item LOUNGE_KEY = $item[ Clan VIP Lounge key ];
+static item MAYO_CLINIC = $item[ portable Mayo Clinic ];
+static item MAYOFLEX = $item[ Mayoflex ];
+static item MAYO_MINDER = $item[ Mayo Minder&trade; ];
+static item MIME_ARMY_SHOTGLASS = $item[ mime army shotglass ];
+static item MODEL_TRAIN_SET = $item[ model train set ];
+static item MOLEHILL_MOUNTAIN = $item[ molehill mountain ];
+static item MUMMING_TRUNK = $item[ mumming trunk ];
+static item PHOTOCOPIED_MONSTER = $item[ photocopied monster ];
+static item PLASTIC_VAMPIRE_FANGS = $item[ plastic vampire fangs ];
+static item RAIN_DOH_BLACK_BOX = $item[ Rain-Doh black box ];
+static item REDWOOD_RAIN_STICK = $item[ redwood rain stick ];
+static item ROYAL_SCEPTER = $item[ Royal scepter ];
+static item ROYAL_TEA = $item[ cuppa Royal tea ];
+static item SAND_DOLLAR = $item[ sand dollar ];
+static item SONGBOOM_BOOMBOX = $item[ SongBoom&trade; BoomBox ];
+static item SOURCE_TERMINAL = $item[ Source terminal ];
+static item SPINNING_WHEEL = $item[ spinning wheel ];
+static item SPOOKY_PUTTY_MONSTER = $item[ Spooky Putty monster ];
+static item SPOOKY_PUTTY_SHEET = $item[ Spooky Putty sheet ];
+static item TEA_TREE = $item[ potted tea tree ];
+static item TIMESPINNER = $item[ Time-Spinner ];
+static item VYKEA_KEY = $item[ VYKEA hex key ];
+static item WITCHESS_SET = $item[ Witchess Set ];
+
+// *** Locations *********
+
+static location BARF_MOUNTAIN = $location[ Barf Mountain ];
+static location GARBAGE_BARGES = $location[ Pirates of the Garbage Barges ];
+static location ICY_PEAK = $location[ The Icy Peak ];
+static location MADNESS_BAKERY = $location[ Madness Bakery ];
+static location OFFICE = $location[ The Hidden Office Building ];
+static location OVERGROWN_LOT = $location[ The Overgrown Lot ];
+static location SKELETON_STORE = $location[ The Skeleton Store ];
+
+// *** Skills ************
+
+static skill CALCULATE_THE_UNIVERSE = $skill[ calculate the universe ];
+static skill RAINBOW_GRAVITATION = $skill[ Rainbow Gravitation ];
+static skill SMILE_OF_MR_A = $skill[ The Smile of Mr. A. ];
+static skill SUMMON_CLIPART = $skill[ Summon Clip Art ];
+static skill SWEET_SYNTHESIS = $skill[ Sweet Synthesis ];
+
+// *** Slots *************
+
+static slot HAT = $slot[ hat ];
+static slot WEAPON = $slot[ weapon ];
+static slot PANTS = $slot[ pants ];
+static slot BACK = $slot[ back ];
+static slot ACC3 = $slot[ acc3 ];
+static slot_set ACCESSORIES = $slots[ acc1, acc2, acc3 ];
+
+// *** Stats *************
+
+static stat MUSCLE = $stat[ muscle ];
+static stat MYSTICALITY = $stat[ mysticality ];
+static stat MOXIE = $stat[ moxie ];
+
+// ***************************
+// *       Parameters        *
+// ***************************
+
+// This script will parse (optional) parameters from the command line.
+// If invoked with no parameters, configuration properties control everything.
+// Otherwise, whole sections of control flow can be disabled.
+//
+// VMF can handle a lot of daily tasks for you.
+// 
+// 1) Phase 1: Pre-farming actions
+//
+//    consumption - eat, drink, and spleen to maximize adventures
+//    item and skill usage to enhance meat and/or item farming
+//    special familiar preparation
+//    workshed manipulation
+//    garden management
+//    free fights
+//    configured scripts for special adventuring (Spacegate, Gingerbread City)
+//    daily tasks that can don't require turns or can be done while drunk
+//    do breakfast
+//    dispose of breakfast loot
+//
+// 2) Phase 2: Farming
+//
+// 3) Phase 3: Post-farming actions
+//
+//    dispose of loot acquired from farming
+//    use up free rests and burn MP
+//    workshed manipulation
+//    make and drink a nightcap
+//    maximize adventures for rollover
+//
+// Commands that affect that control flow:
+//
+// nofarm
+//
+// The user wants VMF to do all the daily tasks, as configured, and then
+// stop before entering the farming loop. Perhaps they want to spend
+// their turns farming Crimbo or doing some other special project?
+//
+// This means doing section 1 only and then exiting before entering
+// farming loop.
+//
+// Once you have done section 1 (via nofarm) and have used as many
+// turns as you desire for special projects, running VMF again with no
+// parameters will run through sections 1, 2, and 3 as normal.
+//
+// Section 1 should be a no-op, since the script is coded to handle
+// being run repeatedly; anything you've already done (and which is no
+// longer available) will be skipped.
+//
+// Section 2 will be a no-op unless you have turns left, in which case,
+// it will farm as usual to consume those turns.
+//
+// Section 3 will be run as normal.
+//
+// ascend
+//
+// If you intend to ascend after running VMF and using up your daily
+// resources, specific parts of sections 1, 2, and 3 will be omitted:
+//
+//     Do not call Garden Harvester (which might fertilize your mushroom
+//       garden, which will preclude picking it before jumping the gash.)
+//     Do not make or drink nightcap
+//
+// Additional optional parameters for fine tuning certain things:
+//
+// synthesize=none      Use spleen only for numberology and adventures.
+//                      Still obey VMF.SynthesizeItemDropForFreeFights
+//                      since we will be doing the free fights
+// synthesixe=meat      Use Sweet Synthesis for Synthesis: Greed
+// synthesize=items     Use Sweet Synthesis for Synthesis: Collection
+//
+// nofamiliars          Use default meat/item familiars rather than using
+//                      resources to lubricate a Robortender or get outfits
+//                      for a Trick-or-Treating Tot.
+
+boolean nofarm = false;
+boolean ascend = false;
+
+void parse_parameters(string... parameters)
+{
+    boolean bogus = false;
+    foreach n, param in parameters {
+	if (param == "help") {
+	    string spaces = "&nbsp;&nbsp;&nbsp;&nbsp;";
+	    print("VeracityMeatFarm PARAM...");
+	    print(spaces + "nofarm - Do all daily tasks but stop before entering farming loop.");
+	    print(spaces + "ascend - You want to ascend after this script, so no nightcap");
+	    print(spaces + "synthesize=TYPE");
+	    print(spaces + spaces + "none - Use spleen for numberology and turns");
+	    print(spaces + spaces + "meat - As above, but also Synthesis: Greed");
+	    print(spaces + spaces + "items - As above, but also Synthesis: Collection");
+	    print(spaces + "nofamiliar - Use default meat/item familiars");
+	    exit;
+	}
+
+	switch (param) {
+	case "":
+	    continue;
+	case "nofarm":
+	    nofarm = true;
+	    continue;
+	case "ascend":
+	    ascend = true;
+	    continue;
+	case "nofamiliars":
+	    // We'll select familiars from those you have available.
+	    // These will not be those that require special actions
+	    // (such as adventuring or consuming items) to set up.
+	    meat_familiar = NO_FAMILIAR;
+	    item_familiar = NO_FAMILIAR;
+	    continue;
+	}
+
+	if (param.starts_with("synthesize")) {
+	    int index = param.index_of("=");
+	    if (index == -1) {
+		print("Synthesize what?", "red");
+		bogus = true;
+		continue;
+	    }
+	    string value = param.substring(index + 1);
+	    switch (value) {
+	    case "none":
+		synthesis_target = NO_EFFECT;
+		continue;
+	    case "meat":
+		synthesis_target = SYNTHESIS_GREED;
+		continue;
+	    case "items": {
+		synthesis_target = SYNTHESIS_COLLECTION;
+		continue;
+	    }
+	    }
+	    print("I don't know how to synthesize '" + value + "'", "red");
+	    bogus = true;
+	    continue;
+	}
+	print("I don't understand what '" + param + "' means", "red");
+	bogus = true;
+	continue;
+    }
+
+    if (bogus) {
+	exit;
+    }
+}
 
 // ***************************
 // *   External Scripts      *
@@ -1885,9 +2152,24 @@ static string_set valid_spacegate_strategies = $strings[
 
 // *** Sweet Synthesis
 
-// Sweet Synthesis effects
-static effect SYNTHESIS_GREED = $effect[ Synthesis: Greed ];		// Meat Drop +300 for 30 turns
-static effect SYNTHESIS_COLLECTION = $effect[ Synthesis: Collection ];	// Item Drop +150 for 30 turns
+// Effects you can get by synthesizing candies
+static effect_set SYNTHESIS_EFFECTS = $effects[
+    Synthesis: Hot,             // Hot Resistance: +9
+    Synthesis: Cold,            // Cold Resistance: +9
+    Synthesis: Pungent,         // Stench Resistance: +9
+    Synthesis: Scary,           // Spooky Resistance: +9
+    Synthesis: Greasy,          // Sleaze Resistance: +9
+    Synthesis: Strong,          // Muscle Percent: +300
+    Synthesis: Smart,           // Mysticality Percent: +300
+    Synthesis: Cool,            // Moxie Percent: +300
+    Synthesis: Hardy,           // Maximum HP Percent: +300
+    Synthesis: Energy,          // Maximum MP Percent: +300
+    Synthesis: Greed,           // Meat Drop: +300
+    Synthesis: Collection,      // Item Drop: +150
+    Synthesis: Movement,        // Experience Percent (Muscle): +50
+    Synthesis: Learning,        // Experience Percent (Mysticality): +50
+    Synthesis: Style,           // Experience Percent (Moxie): +50
+];
 
 // *** That 70s Volcano
 
@@ -2092,119 +2374,18 @@ static item_set workshed_items = $items[
     portable Mayo clinic
 ];
 
-static class NO_CLASS = $class[ none ];
-static effect NO_EFFECT = $effect[ none ];
-static familiar NO_FAMILIAR = $familiar[ none ];
-static item NO_ITEM = $item[ none ];
-static location NO_LOCATION = $location[ none ];
-static monster NO_MONSTER = $monster[ none ];
-static slot NO_SLOT = $slot[ none ];
-static stat NO_STAT = $stat[ none ];
-static vykea NO_VYKEA = $vykea[ none ];
-
-// *** Familiars *********
-
-static familiar BABY_GRAVY_FAIRY = $familiar[ Baby Gravy Fairy ];
-static familiar CHOCOLATE_LAB = $familiar[ Chocolate Lab ];
-static familiar CORNBEEFADON = $familiar[ Cornbeefadon ];
-static familiar GOD_LOBSTER = $familiar[ God Lobster ];
-static familiar HOBO_MONKEY = $familiar[ Hobo Monkey ];
-static familiar JUMPSUITED_HOUND_DOG = $familiar[ Jumpsuited Hound Dog ];
-static familiar LEPRECHAUN = $familiar[ Leprechaun ];
-static familiar MACHINE_ELF = $familiar[ Machine Elf ];
-static familiar ROBORTENDER = $familiar[ Robortender ];
-static familiar SPACE_JELLYFISH = $familiar[ Space Jellyfish ];
-static familiar STOOPER = $familiar[ Stooper ];
-static familiar TOT = $familiar[ Trick-or-Treating Tot ];
-
-// *** Items *************
-
-static item AMULET_COIN = $item[ amulet coin ];
-static item BASTILLE_BATTALION = $item[ Bastille Battalion control rig ];
-static item BARTEND_SWITCH = $item[ toggle switch (Bartend) ];
-static item BEACH_COMB = $item[ Beach Comb ];
-static item BOUNCE_SWITCH = $item[ toggle switch (Bounce) ];
-static item BOX_FULL_OF_MONSTER = $item[ Rain-Doh box full of monster ];
-static item CAN_OF_RAIN_DOH = $item[ can of Rain-Doh ];
-static item CLAN_FAX_MACHINE = $item[ deluxe fax machine ];
-static item CLAN_FLOUNDRY = $item[ Clan Floundry ];
-static item CLAN_FORTUNE_TELLER = $item[ Clan Carnival Game ];
-static item CLAN_POOL_TABLE = $item[ Clan pool table ];
-static item CLAN_SHOWER = $item[ Clan shower ];
-static item CLAN_SWIMMING_POOL = $item[ Olympic-sized Clan crate ];
-static item CLOSED_CIRCUIT_PAY_PHONE = $item[ closed-circuit pay phone ];
-static item COSMIC_BOWLING_BALL = $item[ cosmic bowling ball ];
-static item CURSED_MONKEY_PAW = $item[ cursed monkey's paw ];
-static item DECK = $item[ Deck of Every Card ];
-static item DINSEY_TICKET = $item[ one-day ticket to Dinseylandfill ];
-static item ETCHED_HOURGLASS = $item[ etched hourglass ];
-static item GENIE_BOTTLE = $item[ genie bottle ];
-static item GLITCH_ITEM = $item[ [glitch season reward name] ];
-static item GOVERNMENT_PER_DIEM = $item[ government per-diem ];
-static item GUZZLR_TABLET = $item[ Guzzlr tablet ];
-static item I_VOTED_STICKER = $item[ &quot;I Voted!&quot; sticker ];
-static item LOUNGE_KEY = $item[ Clan VIP Lounge key ];
-static item MAYO_CLINIC = $item[ portable Mayo Clinic ];
-static item MAYOFLEX = $item[ Mayoflex ];
-static item MAYO_MINDER = $item[ Mayo Minder&trade; ];
-static item MIME_ARMY_SHOTGLASS = $item[ mime army shotglass ];
-static item MODEL_TRAIN_SET = $item[ model train set ];
-static item MOLEHILL_MOUNTAIN = $item[ molehill mountain ];
-static item MUMMING_TRUNK = $item[ mumming trunk ];
-static item PHOTOCOPIED_MONSTER = $item[ photocopied monster ];
-static item PLASTIC_VAMPIRE_FANGS = $item[ plastic vampire fangs ];
-static item RAIN_DOH_BLACK_BOX = $item[ Rain-Doh black box ];
-static item REDWOOD_RAIN_STICK = $item[ redwood rain stick ];
-static item ROYAL_SCEPTER = $item[ Royal scepter ];
-static item ROYAL_TEA = $item[ cuppa Royal tea ];
-static item SAND_DOLLAR = $item[ sand dollar ];
-static item SONGBOOM_BOOMBOX = $item[ SongBoom&trade; BoomBox ];
-static item SOURCE_TERMINAL = $item[ Source terminal ];
-static item SPINNING_WHEEL = $item[ spinning wheel ];
-static item SPOOKY_PUTTY_MONSTER = $item[ Spooky Putty monster ];
-static item SPOOKY_PUTTY_SHEET = $item[ Spooky Putty sheet ];
-static item TEA_TREE = $item[ potted tea tree ];
-static item TIMESPINNER = $item[ Time-Spinner ];
-static item VYKEA_KEY = $item[ VYKEA hex key ];
-static item WITCHESS_SET = $item[ Witchess Set ];
-
-// *** Locations *********
-
-static location BARF_MOUNTAIN = $location[ Barf Mountain ];
-static location GARBAGE_BARGES = $location[ Pirates of the Garbage Barges ];
-static location ICY_PEAK = $location[ The Icy Peak ];
-static location MADNESS_BAKERY = $location[ Madness Bakery ];
-static location OFFICE = $location[ The Hidden Office Building ];
-static location OVERGROWN_LOT = $location[ The Overgrown Lot ];
-static location SKELETON_STORE = $location[ The Skeleton Store ];
-
-// *** Skills ************
-
-static skill CALCULATE_THE_UNIVERSE = $skill[ calculate the universe ];
-static skill RAINBOW_GRAVITATION = $skill[ Rainbow Gravitation ];
-static skill SMILE_OF_MR_A = $skill[ The Smile of Mr. A. ];
-static skill SUMMON_CLIPART = $skill[ Summon Clip Art ];
-static skill SWEET_SYNTHESIS = $skill[ Sweet Synthesis ];
-
-// *** Slots *************
-
-static slot HAT = $slot[ hat ];
-static slot WEAPON = $slot[ weapon ];
-static slot PANTS = $slot[ pants ];
-static slot BACK = $slot[ back ];
-static slot ACC3 = $slot[ acc3 ];
-static slot_set ACCESSORIES = $slots[ acc1, acc2, acc3 ];
-
-// *** Stats *************
-
-static stat MUSCLE = $stat[ muscle ];
-static stat MYSTICALITY = $stat[ mysticality ];
-static stat MOXIE = $stat[ moxie ];
-
 // *** Character Variables
 
 string me = my_name();
 class profession = my_class();
+
+// If you are stuck in a LimitMode (via a llama lama gong, for example),
+// many things will not be available. Punt now.
+string current_limit_mode = limit_mode();
+if (current_limit_mode != "") {
+    print( "You are currently stuck in a LimitMode (" + limit_mode() + ").", "red");
+    exit;
+}
 
 // Create a file in your "data" directory named "<PLAYER NAME>.prankees.txt"
 // It will contain one line per prospective victim:
@@ -3152,11 +3333,9 @@ void validate_configuration()
 
     // *** Sweet Synthesis
     if ( can_synthesize ) {
-	if ( synthesis_target != NO_EFFECT ) {
-	    if ( !synthesis_target.to_string().starts_with( "Synthesis:" ) ) {
-		print( "VMF.SynthesisEffect: '" + synthesis_target + "' is not obtainable via Sweet Synthesis.", "red" );
-		valid = false;
-	    }
+	if ( synthesis_target != NO_EFFECT && !( SYNTHESIS_EFFECTS contains synthesis_target ) ) {
+	    print( "VMF.SynthesisEffect: '" + synthesis_target + "' is not obtainable via Sweet Synthesis.", "red" );
+	    valid = false;
 	}
     }
 
@@ -6898,6 +7077,14 @@ void harvest_garden()
 	return;
     }
 
+    // If we are ascending after running this script, simply pick your
+    // garden, rather than letting Garden Harvester fertilize your
+    // Mushroom Garden, which would disallow picking until tomorrow.
+    if (ascend ) {
+	print( "Leaving garden unpicked." );
+	return;
+    }
+
     // Since an external script does the garden for us, we don't know
     // what to expect, so allow for fights and turns being spent
     // (skulldozer or piranha plants)
@@ -7288,19 +7475,16 @@ void visit_disco( int choice )
 
 void drink_up()
 {
-    // If your current familiar is a Stooper, you will be overdrunk when we switch familiars to adventure.
-    // Unequip it, if so.
+    // If your current familiar is a Stooper and we drink to capacity,
+    // you will be overdrunk when we switch familiars to adventure.
+    // 
+    // Unequip Stooper to restore normal inebriety limit
     if ( my_familiar() == STOOPER ) {
 	use_familiar( NO_FAMILIAR );
     }
 
     int current_drunk = my_inebriety();
     int max_drunk = inebriety_limit();
-    
-    // If we have not yet drunk our nightcap, make one now.
-    if ( current_drunk <= max_drunk && nightcap != NO_ITEM && item_amount( nightcap ) == 0 ) {
-	craft_or_retrieve_item( 1, nightcap );
-    }
 
     if ( current_drunk >= max_drunk ) {
 	return;
@@ -8103,18 +8287,47 @@ void collect_sea_jelly()
     }
 }
 
-void drink_nightcap()
+void create_and_drink_nightcap()
 {
-    int current_inebriety_limit = inebriety_limit();
-
-    if ( my_inebriety() > current_inebriety_limit || nightcap == NO_ITEM ) {
+    // If you don't want to drink a nightcap, punt now.
+    if ( nightcap == NO_ITEM ) {
 	return;
     }
 
+    // If you want to ascend after running this script, don't drink a
+    // nightcap to bank turns for a tomorrow that will never come.
+    if ( ascend ) {
+	return;
+    }
+
+    int current_inebriety_limit = inebriety_limit();
+    int max_inebriety_limit = current_inebriety_limit;
+
+    // If we are currently using our Stooper, max inebriety is already increased.
+    // (This is not expected, but I have seen it when rerunning the script.)
+    boolean stooper_used = my_familiar() == STOOPER;
+    if ( have_stooper && !stooper_used ) {
+	max_inebriety_limit++;
+    }
+
+    // If we are already overdrink, don't bother with a nightcap
+    if ( my_inebriety() > max_inebriety_limit ) {
+	return;
+    }
+
+    // Otherwise, time to drink up!
     print( "Time for a little nightcap" );
 
-    // If you have a Stooper, use it as part of your nightcao
-    boolean use_stooper = have_stooper && use_familiar( STOOPER ) && ( inebriety_limit() > current_inebriety_limit );
+    // Get your nightcap into inventory
+    if ( item_amount( nightcap ) == 0 ) {
+	craft_or_retrieve_item( 1, nightcap );
+    }
+
+    // If you have a Stooper, use it as part of your nightcap
+    boolean use_stooper =
+	( have_stooper && !stooper_used ) &&
+	use_familiar( STOOPER ) &&
+	( inebriety_limit() > current_inebriety_limit );
 
     int ode_needed = nightcap.inebriety + ( use_stooper ? 1 : 0 );
     ode_up( ode_needed );
@@ -8143,21 +8356,27 @@ void telescope()
     }
 }
 
-void chateau()
+void harvest_chateau_desk()
 {
     if ( !have_chateau ) {
 	return;
     }
 
-    // Use up free rests since Chateau Mantegna will increase mainstat
+    if ( !get_property( "_chateauDeskHarvested" ).to_boolean() ) {
+	visit_url( "place.php?whichplace=chateau&action=chateau_desk" );
+    }
+}
+
+void use_free_rests()
+{
+    // The Chateau Mantegna is especially desireable, since it will
+    // increase mainstat, but use free rests to refill MP regardless.
+    // *** Should burn MP if resting will overflow Maximum MP
+
     int free_rests = total_free_rests();
     int used_rests = get_property( "timesRested" ).to_int();
     while ( used_rests++ < free_rests ) {
 	cli_execute( "rest free" );
-    }
-
-    if ( !get_property( "_chateauDeskHarvested" ).to_boolean() ) {
-	visit_url( "place.php?whichplace=chateau&action=chateau_desk" );
     }
 }
 
@@ -8883,6 +9102,31 @@ void sell_breakfast_loot()
     }
 }
 
+void use_spinning_wheel()
+{
+    if (!get_property("_spinningWheel").to_boolean()) {
+	visit_url("campground.php?action=spinningwheel");
+    }
+}
+
+void burn_excess_mp()
+{
+    // Increase stats and available HP/MP
+    ballpit();
+    telescope();
+
+    // *** The chateau is especially desireable, since resting gives you
+    // *** XP, but we should use up all free rests regardless of source
+    // *** in order to refill MP. We should burn excess before each such
+    // *** rest to ensure we don't overflow our Maximum MP.
+
+    // Use free rests to gain XP and restore HP & MP
+    use_free_rests();
+
+    // Burn MP at Nunnery
+    nuns();
+}
+
 boolean counterExpired( string label, string turns_remaining )
 {
     print( "Counter '" + label + "' expires in " + turns_remaining + " turns" );
@@ -8906,19 +9150,22 @@ boolean counterExpired( string label, string turns_remaining )
 
 void run_tasks()
 {
+    // *** Phase 1: Pre-farming actions
+
     // Cloud Talk gives you +25% stat gains
     visit_getaway_campsite();
 
     // If spinning wheel is our first workshed item, install it.
     if ( workshed1 == SPINNING_WHEEL ) {
 	install_workshed_item( SPINNING_WHEEL );
-	// If it is not the second workshed item, harvest it now so the other item can be installed.
+	// If it is not the second workshed item, use it now so the
+	// other item can be installed.
 	if ( workshed2 != SPINNING_WHEEL ) {
-	    visit_url("campground.php?action=spinningwheel");
+	    use_spinning_wheel();
 	}
     }
 
-    // Consume to gain adventures and stats
+    // *** Consume to gain adventures and stats
     eat_up();
     drink_up();
 
@@ -8937,12 +9184,47 @@ void run_tasks()
     }
 
     // Consume to synthesize candy and/or gain turns
+    // This will also cast numberology, as appropriate
     spleen_up();
+    
+    // *** Daily tasks that don't require available turns and/or can't
+    // be done while drunk
+
+    tea_tree();
+    handle_royalty();
+    detective_school();
+    make_wads();
+    claim_defective_token();
+    collect_sea_jelly();
+    psychoanalize_jick();
+
+    // Collect a Guzzlr cocktail set
+    handle_guzzlr();
+
+    // Get items from Clan Rumpus room and Clan Lounge
+    // **** whitelist to/from configured clan?
+    raid_clan();
+    raid_lounge();
+
+    // Create desired clip art
+    clip_art();
+
+    // Make Source Terminal Extrusions
+    create_extrusions();
+
+    // Use Nash Crosby's still
+    use_still();
+
+    // Bestow The Smile of Mr. A. on your friends
+    send_smiles();
+
+    // Consult with the clan fortune teller
+    consult_with_madame_zatara();
 
     // Get necessary items
     acquire_gear();
 
-    // Perform daily tasks that require available turns
+    // *** Daily tasks that require available turns
     cheat_deck();
     use_timespinner();
 
@@ -9059,9 +9341,20 @@ void run_tasks()
     // Ask the genie for wishes. This might include fighting monsters
     genie_wishes();
 
-    if (!run_turns) {
+    // Spinning wheel and garden harvesting are potentially part of
+    // breakfast, but we had special handling for them prevously.
+
+    // Getting breakfast is the final pre-farming task.
+    breakfast();
+
+    // Sell breakfast loot
+    sell_breakfast_loot();
+
+    if (nofarm) {
 	exit;
     }
+
+    // *** Phase 2: Farming
 
     // Allow this script to be run multiple times
     if ( my_inebriety() <= inebriety_limit() &&
@@ -9090,74 +9383,30 @@ void run_tasks()
 	// *** end of farming ***
     }
 
+    // *** Phase 3: Post-farming actions
+
     // Sell loot
     sell_adventure_loot();
 
-    // Perform daily tasks that don't require available turns and/or
-    // can't be done while drunk
-    tea_tree();
-    handle_royalty();
-    detective_school();
-    make_wads();
-    claim_defective_token();
-    collect_sea_jelly();
-    psychoanalize_jick();
-
-    // Drink nightcap
-    drink_nightcap();
-
-    // Since drinking a nightcap is optional, you might have 0 turns
-    // available here. Do things that can be done drunk and don't
-    // require a turn here and things that do require a turn elsewhere.
-
-    // Increase stats and available HP/MP
-    ballpit();
-    telescope();
-
-    // Use free rests to gain XP and restore HP & MP
-    chateau();
-
-    // Burn MP at Nunnery
-    nuns();
+    // Use free rests to refill HP & MP - and increase mainstat, if you
+    // rest using the Chateau Mantegna
+    burn_excess_mp();
 
     // Time to install certain second workshed items.
     switch (workshed2) {
     case MAYO_CLINIC:
-	// portable Mayo clinic ready to use tomorrow
-    case SPINNING_WHEEL:
-	// spinning wheel ready to use in breakfast
+	// Install portable Mayo clinic for use tomorrow
 	install_workshed_item( workshed2 );
+	break;
+    case SPINNING_WHEEL:
+	// Install spinning wheel and use it now
+	install_workshed_item( workshed2 );
+	use_spinning_wheel();
 	break;
     }
 
-    // Do breakfast at the end, since the spinning wheel, for example,
-    // depends on your level, and you could have leveled up.
-    breakfast();
-
-    // Collect a Guzzlr cocktail set
-    handle_guzzlr();
-
-    // Get items from Clan Rumpus room and Clan Lounge
-    raid_clan();
-    raid_lounge();
-
-    // Create desired clip art
-    clip_art();
-
-    // Make Source Terminal Extrusions
-    create_extrusions();
-
-    // Use Nash Crosby's still
-    use_still();
-
-    // Bestow The Smile of Mr. A. on your friends
-    send_smiles();
-
-    // Consult with the clan fortune teller
-    consult_with_madame_zatara();
-
-    // Sell breakfast loot
-    sell_breakfast_loot();
+    // Drink nightcap
+    create_and_drink_nightcap();
 
     // If you have a Trick or Treating Tot, prefer that, since the li'l
     // unicorn costume is likely better than general familiar equipment
@@ -9178,7 +9427,7 @@ static string COUNTER_SCRIPT = "counterScript";
 string new_counter_script = configure_counter_script( "counterExpired", __FILE__ );
 string old_counter_script = get_property( COUNTER_SCRIPT );
 
-void main()
+void main(string... parameters)
 {
     void migrate_settings()
     {
@@ -9203,6 +9452,15 @@ void main()
 
     // Rename configuration properties if needed
     migrate_settings();
+
+    // Parameters are optional. Depending on how the script is invoked,
+    // there may be a single string with space-separated keywords, or
+    // multiple strings. Whichever, turn into an array of keywords.
+    string[] params = parameters.join_strings(" ").split_string(" ");
+
+    // Parse parameters, if any. Do it before validating the
+    // configuration, since parameters can override properties.
+    parse_parameters(params);
 
     // Check configuration and either correct or abort
     validate_configuration();
