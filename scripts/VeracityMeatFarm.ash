@@ -348,9 +348,7 @@ boolean fight_eldritch_tentacles = define_property( "VMF.FightEldritchTentacles"
 
 // Breakfast
 //
-// This script will perform "breakfast" activities (at the end of running turns;
-// some breakfasty activities, like spinning Meat from air using a spinning wheel
-// in your workshed improve with level.
+// This script will perform "breakfast" activities.
 //
 // KoLmafia's built-in breakfeast command is highly configurable on the Preferences panel.
 // I am quite happy with it, for what it does, but there are other daily activities which
@@ -5925,6 +5923,10 @@ void visit_getaway_campsite()
 
 void get_source_terminal_enhancement()
 {
+    if ( !have_source_terminal ) {
+	return;
+    }
+
     string enhancements = get_property( "sourceTerminalEnhanceKnown" );
     if ( !enhancements.contains_text( source_terminal_enhancement ) ) {
 	return;
@@ -8399,7 +8401,7 @@ void breakfast()
 	return;
     }
 
-    print( "Time for breakfast - at the end of the day?" );
+    print( "Time for breakfast!" );
 
     if ( breakfast_script == "" ) {
 	cli_execute( "breakfast" );
