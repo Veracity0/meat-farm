@@ -1304,6 +1304,7 @@ static item COSMIC_BOWLING_BALL = $item[ cosmic bowling ball ];
 static item CURSED_MONKEY_PAW = $item[ cursed monkey's paw ];
 static item DECK = $item[ Deck of Every Card ];
 static item DINSEY_TICKET = $item[ one-day ticket to Dinseylandfill ];
+static item DRIFTWOOD_BEACH_COMB = $item[ driftwood beach comb ];
 static item ETCHED_HOURGLASS = $item[ etched hourglass ];
 static item GENIE_BOTTLE = $item[ genie bottle ];
 static item GLITCH_ITEM = $item[ [glitch season reward name] ];
@@ -1575,7 +1576,7 @@ static string_list ezandora_detective_solver = {
     "Ezandora-Detective-Solver-branches-Release"
 };
 
-boolean check_installed( string... scripts )
+boolean check_installed( string_list scripts )
 {
     foreach i, script in scripts {
 	if ( git_exists( script ) || svn_exists( script ) ) {
@@ -2437,7 +2438,7 @@ boolean have_tot = have_familiar( TOT );
 
 boolean have_amulet_coin = ( available_amount( AMULET_COIN ) > 0 );
 boolean have_battalion = ( available_amount( BASTILLE_BATTALION ) > 0 );
-boolean have_beach_comb = ( available_amount( BEACH_COMB ) > 0 );
+boolean have_beach_comb = ( available_amount( BEACH_COMB ) > 0 || available_amount( DRIFTWOOD_BEACH_COMB ) > 0 );
 boolean have_black_box = ( available_amount( RAIN_DOH_BLACK_BOX ) > 0 );
 boolean have_boombox = ( available_amount( SONGBOOM_BOOMBOX ) > 0 );
 boolean have_closed_circuit_pay_phone = ( available_amount( CLOSED_CIRCUIT_PAY_PHONE ) > 0 );
@@ -8070,6 +8071,14 @@ void comb_beach()
 	return;
     }
 
+    // Ensure the Beach Comb is either equippped or in inventory
+    // The Beach Comb is not a quest item, so could be in closet, say.
+    // (BeachComber will do this, but combo will not).
+    if ( available_amount( BEACH_COMB ) > 0 &&
+	 equipped_amount( BEACH_COMB ) == 0 ) {
+	retrieve_item( 1, BEACH_COMB );
+    }
+
     boolean use_beach_comber = beach_comb_script == "BeachComber";
     boolean use_combo = beach_comb_script == "combo";
     
@@ -8296,6 +8305,12 @@ void create_and_drink_nightcap()
 	return;
     }
 
+    // If we have unused turns, don't overdrink.  I've seen this happen
+    // when KoL returned a 500 error while adventuring
+    if ( my_adventures() > 0 ) {
+	return;
+    }
+
     // If you want to ascend after running this script, don't drink a
     // nightcap to bank turns for a tomorrow that will never come.
     if ( ascend ) {
@@ -8312,7 +8327,7 @@ void create_and_drink_nightcap()
 	max_inebriety_limit++;
     }
 
-    // If we are already overdrink, don't bother with a nightcap
+    // If we are already overdrunk, don't bother with a nightcap
     if ( my_inebriety() > max_inebriety_limit ) {
 	return;
     }
