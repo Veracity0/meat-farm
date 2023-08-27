@@ -1485,13 +1485,8 @@ void parse_parameters(string... parameters)
 	    continue;
 	}
 
-	if (param.starts_with("synthesize")) {
+	if (param.starts_with("synthesize=")) {
 	    int index = param.index_of("=");
-	    if (index == -1) {
-		print("Synthesize what?", "red");
-		bogus = true;
-		continue;
-	    }
 	    string value = param.substring(index + 1);
 	    switch (value) {
 	    case "none":
@@ -5274,6 +5269,59 @@ int fight_voter()
     return turns_used;
 }
 
+int fill_stomach()
+{
+    // We'll fill your stomach at the beginning of a run in eat_up().
+    // Subsequent actions can affect available fullness.
+    // 
+    // - Pantsgiving, every 5, 50, 500... combats
+    // - August 16th: Roller Coaster Day!
+    // - lupine appetite hormones
+    // - Cuppa Voraci tea
+    // - distention pill
+    // - sweet tooth
+
+    // This is a simpler function to handle such cases.
+
+    // Pantsgiving could have given us some fullness
+    int full_remaining = fullness_limit() - my_fullness();
+    if ( full_remaining <= 0 ) {
+	return 0;
+    }
+
+    // Hard to imagine we got here without using magnesium today,
+    // but handle it.
+    if ( !get_property( "_milkOfMagnesiumUsed" ).to_boolean() ) {
+	craft_or_retrieve_item( 1, MAGNESIUM );
+	use( 1, MAGNESIUM );
+    }
+
+    int initial_adventures = my_adventures();
+    try {
+	// Eating with Mayo could leave us improperly equipped, if we
+	// used Travoltan trousers to buy it
+	cli_execute( "checkpoint" );
+
+	// Use horseradishes if you got 'em
+	int available_horseradishes = item_amount( HORSERADISH );
+	int horseradishes = min( full_remaining, available_horseradishes, 5 );
+	if ( horseradishes > 0 ) {
+	    eat_food( horseradishes, HORSERADISH );
+	    full_remaining -= horseradishes;
+	}
+
+	// use whatever is best to finish filling your stomach
+	if ( full_remaining > 0 ) {
+	    fill( STOMACH );
+	}
+    }
+    finally {
+	cli_execute( "outfit checkpoint" );
+    }
+
+    return my_adventures() - initial_adventures;
+}
+
 void do_adventure( location loc, boolean one_turn, int choice )
 {
     // If we're overdrunk, don't even think about adventuring
@@ -5288,47 +5336,6 @@ void do_adventure( location loc, boolean one_turn, int choice )
 
     // Requesting either one turn or (up to) all remaining turns
     int turns = one_turn ? 1 : my_adventures();
-
-    int fill_stomach()
-    {
-	// Pantsgiving could have given us some fullness
-	int full_remaining = fullness_limit() - my_fullness();
-	if ( full_remaining <= 0 ) {
-	    return 0;
-	}
-
-	// Hard to imagine we got here without using magnesium today,
-	// but handle it.
-	if ( !get_property( "_milkOfMagnesiumUsed" ).to_boolean() ) {
-	    craft_or_retrieve_item( 1, MAGNESIUM );
-	    use( 1, MAGNESIUM );
-	}
-
-	int initial_adventures = my_adventures();
-	try {
-	    // Eating with Mayo could leave us improperly equipped, if we
-	    // used Travoltan trousers to buy it
-	    cli_execute( "checkpoint" );
-
-	    // Use horseradishes if you got 'em
-	    int available_horseradishes = item_amount( HORSERADISH );
-	    int horseradishes = min( full_remaining, available_horseradishes, 5 );
-	    if ( horseradishes > 0 ) {
-		eat_food( horseradishes, HORSERADISH );
-		full_remaining -= horseradishes;
-	    }
-
-	    // use whatever is best to finish filling your stomach
-	    if ( full_remaining > 0 ) {
-		fill( STOMACH );
-	    }
-	}
-	finally {
-	    cli_execute( "outfit checkpoint" );
-	}
-
-	return my_adventures() - initial_adventures;
-    }
 
     boolean adventure_until_choice( int turns )
     {
@@ -9367,6 +9374,10 @@ void run_tasks()
     // Sell breakfast loot
     sell_breakfast_loot();
 
+    // Previous actions may have given us available fullness.
+    // If so, use it up.
+    fill_stomach();
+
     if (nofarm) {
 	exit;
     }
@@ -9434,9 +9445,9 @@ void run_tasks()
     maximize( "advs", false );
 }
 
-string configure_counter_script( string function, string file )
+string configure_counter_script( string function_name, string file )
 {
-    return function + "@" + file;
+    return function_name + "@" + file;
 }
 
 // We explicitly handle all sorts of things that have counters that abort.
