@@ -1,5 +1,5 @@
 script <VMF>;
-since r27371;
+since r27718;
 
 import <vprops.ash>;
 import <vcon.ash>
@@ -284,6 +284,9 @@ location farm_location = define_property( "VMF.FarmLocation", "location", "none"
 
 // Should we use a one-day ticket to Dinseylandfill to farm Barf Mountain, if one is available?
 boolean should_use_dinsey_ticket = define_property( "VMF.UseDinseylandfillTicket", "boolean", "true" ).to_boolean();
+
+// Should we spend FunFunds on Dinsey food-cones, are save them for day passes?
+boolean should_eat_dinsey_food_cones = define_property( "VMF.EatDinseyFoodCones", "boolean", "false" ).to_boolean();
 
 // Familiar to use for farming. If "none", we will choose one from those
 // you have available.
@@ -4534,7 +4537,7 @@ void reset_best_consumables( organ o, item it )
     // Exclude this consumable from consideration by vcon
     user_excluded_consumables[ it ] = true;
 
-    // Force recalculateion
+    // Force recalculation
     switch ( o ) {
     case LIVER:
 	vcon_best_boozes.clear();
@@ -7446,9 +7449,14 @@ void eat_up()
     }
 
     // The Dinsey food-cone is a 2-full EPIC food that grants 30 turns of The Dinsey Way (+80% Meat Drop)
-    // It is untradable - as are Dinsey FunFunds - so use only if you have access to DinseyLandFill and have
-    // available FunFunds. If you are farming Barf Mountain, you should have plenty...
-    if ( stench_airport_available ) {
+    //
+    // It is untradable - as are Dinsey FunFunds - so use only if you have access to DinseyLandFill
+    // and have available FunFunds. If you are farming Barf Mountain, you should have plenty...
+    //
+    // On the other hand, instead of spending 2 FunFunds per food-cone, perhaps you'd prefer
+    // to spend 20 FunFunds on one-day tickets to Dinseylandfill, which sell for a lot of Meat.
+    // So it's now under a preference and you have to opt-in.
+    if ( !nofarm && stench_airport_available && should_eat_dinsey_food_cones ) {
 	int funds = item_amount( FUN_FUNDS );
 	item food = FOODCONE;
 	int count = min( full_remaining / food.fullness, funds / 2 );
@@ -8811,6 +8819,19 @@ void consult_with_madame_zatara()
 
 boolean get_fax( monster enemy )
 {
+    boolean check_faxbot( string faxbot )
+    {
+	return can_faxbot( enemy, faxbot );
+    }
+
+    string choose_faxbot()
+    {
+	return
+	    check_faxbot( "EasyFax" ) ? "EasyFax" :
+	    check_faxbot( "CheeseFax" ) ? "CheeseFax" :
+	    "";
+    }
+
     boolean check_fax()
     {
 	if ( item_amount(PHOTOCOPIED_MONSTER) == 0 ) {
@@ -8856,56 +8877,28 @@ boolean get_fax( monster enemy )
 	send_fax();
     }
 
-    if ( get_fax( "cheesefax" ) ) {
+    string faxbot = choose_faxbot();
+
+    if ( faxbot == "" ) {
+	print( "Unable to fax in a " + enemy + ". Are you sure it is in the fax network?" );
+	return false;
+    }
+
+    print( "Requesting a fax..." );
+
+    if ( get_fax( faxbot ) ) {
 	return true;
     }
 
-    if ( get_fax( "easyfax" ) ) {
-	return true;
-    }
-
-    print( "Unable to fax in a " + enemy + ". Are you sure it is in the fax network?" );
     return false;
 }
 
-void fax_monster()
+void fight_and_copy_monsters()
 {
-    if ( !have_clan || !have_lounge_key || !have_fax_machine ) {
-	return;
-    }
+    // This is called after we have initiated a fight.
+    // Currently, only by using a photocopied monster
+    // *** Eventually, after reminiscing one.
 
-    // You request a fax by sending a chat message to a faxbot
-    if ( !get_property( "chatLiterate" ).to_boolean() ) {
-	return;
-    }
-
-    if ( fax_monster == NO_MONSTER || get_property( "_photocopyUsed" ).to_boolean() ) {
-	return;
-    }
-
-    if ( !can_faxbot( fax_monster ) ) {
-	print( "monster '" + fax_monster + "' is not currently available in the fax network." );
-	return;
-    }
-
-    print( "Requesting a fax" );
-
-    if ( !get_fax( fax_monster ) ) {
-	print( "Unable to fax monster '" + fax_monster + "'." );
-	return;
-    }
- 
-    // Use the desired familiar. If none specified, use farming familiar
-    familiar fax_familiar = summoned_monster_familiar();
-
-    // *** ask for no familiar item ... because we want to be able to copy it before our familiar acts?
-    suit_up( NO_LOCATION, fax_familiar, NO_ITEM );
-
-    // Use the photocopied monster to start the fight
-    between_battle_checks();
-    visit_url( "inv_use.php?whichitem=" + PHOTOCOPIED_MONSTER.to_int() );
-
-    // Fight the monster and perhaps copy it
     while ( true ) {
 	// Decide which monster copying mechanism to use.
 	boolean setup_copying()
@@ -8988,6 +8981,110 @@ void fax_monster()
 	between_battle_checks();
 	visit_url( "inv_use.php?whichitem=" + copied_monster.to_int() );
     }
+}
+
+void fax_monster()
+{
+    monster current_photocopied_monster()
+    {
+	if ( item_amount(PHOTOCOPIED_MONSTER) == 0 ) {
+	    return NO_MONSTER;
+	}
+	return get_property( "photocopyMonster" ).to_monster();
+    }
+
+    monster get_photocopied_monster()
+    {
+	// You can only use one phptocopied monster per day.
+	// If you have already done so, no dice
+	if ( get_property( "_photocopyUsed" ).to_boolean() ) {
+	    print( "You can only use one photocopied monster per day." );
+	    return NO_MONSTER;
+	}
+
+	// If you have the correct photocopied monster already, score!
+	monster photocopy = current_photocopied_monster();
+	if ( photocopy == fax_monster) {
+	    print( "You already have a photocopy of a '" + fax_monster + "'.");
+	    return fax_monster;
+	}
+
+	if ( photocopy != NO_MONSTER ) {
+	    // We have a photocopy of the Wrong monster. Dump it.
+	    send_fax();
+	} else {
+	    // We have no photopy. Receive what is currently in the fax machine.
+	    receive_fax();
+	    photocopy = current_photocopied_monster();
+
+	    // If it's the monster we are looking for, score!
+	    if ( photocopy == fax_monster ) {
+		print( "The fax machine already contains a '" + fax_monster + "'.");
+		return fax_monster;
+	    }
+
+	    // Wrong monster. Dump it.
+	    send_fax();
+	}
+
+	// We need to contact a faxbot to request the monster
+	// You request a fax by sending a chat message to a faxbot
+	if ( !get_property( "chatLiterate" ).to_boolean() ) {
+	    print( "You are not chat literate. No faxing for you!");
+	    return NO_MONSTER;
+	}
+
+	// Is the monster somewhere in the fax network?
+	if ( !can_faxbot( fax_monster ) ) {
+	    print( "Monster '" + fax_monster + "' is not currently available in the fax network." );
+	    return NO_MONSTER;
+	}
+
+	// Find an appropiate faxbot and request the onster
+	if ( get_fax( fax_monster) ) {
+	    return fax_monster;
+	}
+
+	print( "Unable to fax monster '" + fax_monster + "'." );
+	return NO_MONSTER;
+    }
+
+    void prepare_for_fight()
+    {
+	// Use the desired familiar. If none specified, use farming familiar
+	familiar fax_familiar = summoned_monster_familiar();
+
+	// *** ask for no familiar item ... because we want to be able to copy it before our familiar acts?
+	suit_up( NO_LOCATION, fax_familiar, NO_ITEM );
+
+    }
+
+    // In order to fax, you must have access to the VIP lounge and
+    // be in a clan which has a fax machine
+    if ( !have_lounge_key || !have_clan || !have_fax_machine ) {
+	return;
+    }
+
+    // If you don't want to fax a monster, don't get one
+    if ( fax_monster == NO_MONSTER ) {
+	return;
+    }
+
+    monster photocopy = get_photocopied_monster();
+    if ( photocopy == NO_MONSTER) {
+	// *** If we want to reminisce to get a monster,
+	// *** here is the place to do it.
+	return;
+    }
+
+    prepare_for_fight();
+
+    // Use the photocopied monster to start the fight
+    between_battle_checks();
+    visit_url( "inv_use.php?whichitem=" + PHOTOCOPIED_MONSTER.to_int() );
+
+    // Fight (perhaps copying) the monster
+    fight_and_copy_monsters();
 }
 
 void clip_art()
