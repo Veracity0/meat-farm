@@ -682,7 +682,7 @@ string_list deck_cards = define_property( "VMF.DeckCards", "string", "Island|Anc
 
 // Which monster to fax in to a photocopied monster
 
-monster fax_monster = define_property( "VMF.FaxMonster", "monster", "Knob Goblin Embezzler" ).to_monster();
+monster fax_monster = define_property( "VMF.FaxMonster", "monster", "none" ).to_monster();
 
 // Reason for faxing monster
 //
@@ -8827,6 +8827,7 @@ boolean get_fax( monster enemy )
     string choose_faxbot()
     {
 	return
+	    check_faxbot( "OnlyFax" ) ? "OnlyFax" :
 	    check_faxbot( "EasyFax" ) ? "EasyFax" :
 	    check_faxbot( "CheeseFax" ) ? "CheeseFax" :
 	    "";
