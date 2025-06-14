@@ -116,17 +116,17 @@ import <vcon.ash>
 //
 // Bastille Battalion		Bastille
 //				https://kolmafia.us/showthread.php?22957
-//				Ezandora-Bastille-branches-Release
+//				Ezandora-Bastille
 // Detective School		Detective Solver
 //				https://kolmafia.us/showthread.php?20406
-//				Ezandora-Detective-Solver-branches-Release
+//				Ezandora-Detective-Solver
 // TimeSpinner			Far Future
 //				https://kolmafia.us/showthread.php?20575
-//				Ezandora-Far-Future-branches-Release
+//				Ezandora-Far-Future
 // (soon)
 // Kremlin's Greatest Briefcase	KGBriefcase
 //				https://kolmafia.us/showthread.php?21892
-//				Ezandora-Briefcase-branches-Release
+//				Ezandora-Briefcase
 
 // ***************************
 //       Optional IOTMs      *
@@ -1563,15 +1563,15 @@ static string_list spacegate_scripts = {
 // Ezandora's scripts
 
 static string_list ezandora_far_future = {
-    "Ezandora-Far-Future-branches-Release"
+    "Ezandora-Far-Future"
 };
 
 static string_list ezandora_bastille = {
-    "Ezandora-Bastille-branches-Release"
+    "Ezandora-Bastille"
 };
 
 static string_list ezandora_detective_solver = {
-    "Ezandora-Detective-Solver-branches-Release"
+    "Ezandora-Detective-Solver"
 };
 
 boolean check_installed( string_list scripts )
@@ -1637,9 +1637,9 @@ static location_set known_semirare_locations = $locations[
     A Mob of Zeppelin Protesters,	// (Choice Adventure) pick non-combat to scare away protesters
     The Red Zeppelin,			// (The Red Fox - combat) red foxglove, Red Fox glove (rarely)
     // *** The Nearby Plains
-    Battlefield (No Uniform),		// six-pack of New Cloaca-Cola
-    Battlefield (Cloaca Uniform),	// six-pack of New Cloaca-Cola
-    Battlefield (Dyspepsi Uniform),	// six-pack of New Cloaca-Cola
+    The Cola Wars Battlefield,			// six-pack of New Cloaca-Cola
+    Cola Wars Battlefield (Cloaca Uniform),	// six-pack of New Cloaca-Cola
+    Cola Wars Battlefield (Dyspepsi Uniform),	// six-pack of New Cloaca-Cola
     The Batrat and Ratbat Burrow,	// Dogsgotnonoz pills
     The Castle in the Clouds in the Sky (Basement),	// Super Weight-Gain 9000
     The Castle in the Clouds in the Sky (Ground Floor),	// possibility potion
