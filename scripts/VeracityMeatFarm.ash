@@ -187,6 +187,8 @@ import <vcon.ash>
 // --> Will upgrade abstractions
 // Manual of Numberology
 // --> Will Calculate the Universe for result during spleening (configurable)
+// Mayam Calendar
+// --> Will use up to three times a day
 // Mayfly Bait Necklace
 // --> Will use to get extra FunFunds in Barf Mountain
 // Mayo Clinic
@@ -745,11 +747,37 @@ string dmt_choice = define_property( "VMF.DMTChoice", "string", "" );
 
 int numberology_goal = define_property( "VMF.NumberologyGoal", "int", "69" ).to_int();
 
+// *** Mayam Calendar
+
+// With a Mayam Calendar, you can "consider" it up three times per day to gain items, stats, and effects.
+// We will invoke the "mayam" command as configured.
+// These are the defaults:
+//
+// mayam resonance mayam spinach
+// -> 100 turns of Big Eyes (+30% Item Drops from Monsters)
+// -> yam
+// -> Moxie substats
+// -> yam
+// -> Mayam spinach (awesome size 1 food)
+// mayam rings yam meat yam clock
+// -> yam
+// -> Meat
+// -> yam
+// -> +5 Adventures
+// mayam rings sword lightning cheese explosion
+// -> Muscle substats
+// -> Mysticality substats
+// -> goat cheese
+// -> +5 PvP fights
+
+string_list mayam_calendar_considerations = define_property( "VMF.MayamCalendarConsiderations", "string", "resonance mayam spinach|rings yam meat yam clock|rings sword lightning cheese explosion", "list" );
+string_list available_considerations;
+
 // *** mayfly bait necklace **
 
 // With a mayfly bait necklace, you can summon 30 mayfly swarms per
 // day. Once you are done, perhaps you'd reather equip a different
-// accessry. Perhaps not; it does grant +10% Meat and Items.
+// accessory. Perhaps not; it does grant +10% Meat and Items.
 
 item mayfly_bait_replacement = define_property( "VMF.MayflyReplacementAccessory", "item", "none" ).to_item();
 
@@ -1315,6 +1343,7 @@ static item GOVERNMENT_PER_DIEM = $item[ government per-diem ];
 static item GUZZLR_TABLET = $item[ Guzzlr tablet ];
 static item I_VOTED_STICKER = $item[ &quot;I Voted!&quot; sticker ];
 static item LOUNGE_KEY = $item[ Clan VIP Lounge key ];
+static item MAYAM_CALENDAR = $item[ Mayam Calendar ];
 static item MAYO_CLINIC = $item[ portable Mayo Clinic ];
 static item MAYOFLEX = $item[ Mayoflex ];
 static item MAYO_MINDER = $item[ Mayo Minder&trade; ];
@@ -1668,8 +1697,8 @@ static location_set known_semirare_locations = $locations[
     The Spooky Forest,			// fake blood
     Whitey's Grove,			// bag of lard
     // The Mysterious Island of Mystery
-    Hippy Camp,				// teeny-tiny magic scroll
-    Frat House,				// bottle of rhinoceros hormones
+    The Hippy Camp,			// teeny-tiny magic scroll
+    The Orcish Frat House,		// bottle of rhinoceros hormones
     The Obligatory Pirate's Cove,	// bottle of pirate juice
     // Hobopolis
     A Maze of Sewer Tunnels,		// (combat - C. H. U. M. chieftain) Filthy Crown (Clan Trophy)
@@ -2450,6 +2479,7 @@ boolean have_genie_bottle = ( available_amount( GENIE_BOTTLE ) > 0 );
 boolean have_glitch_item = ( item_amount( GLITCH_ITEM ) > 0 );
 boolean have_guzzlr_tablet = ( available_amount( GUZZLR_TABLET ) > 0 );
 boolean have_lounge_key = ( item_amount( LOUNGE_KEY ) > 0 );
+boolean have_mayam_calendar = ( available_amount( MAYAM_CALENDAR ) > 0 );
 boolean have_mayo_clinic = campground contains MAYO_CLINIC;
 boolean have_mayo_minder = ( item_amount( MAYO_MINDER ) > 0 );
 boolean have_mime_army_shotglass = ( available_amount( MIME_ARMY_SHOTGLASS ) > 0 );
@@ -2577,6 +2607,61 @@ string valid_monkey_paw_wish( string wish )
     }
     // *** TBD
     return wish;
+}
+
+// Utility to calculate used mayam calendar symbols
+string[string] resonances = {
+    "mayam spinach" : "eye yam eyepatch yam",
+    "yam and swiss" : "yam meat cheese yam",
+    "yam cannon" : "sword yam eyepatch explosion",
+    "tiny yam cannon" : "fur lightning eyepatch yam",
+    "yam battery" : "yam lightning yam clock",
+    "stuffed yam stinkbomb" : "vessel yam cheese explosion",
+    "furry yam buckler" : "fur yam wall yam",
+    "thanksgiving bomb" : "yam yam yam explosion",
+    "yamtility belt" : "yam meat eyepatch yam",
+    "caught yam-handed" : "chair yam yam clock",
+    "memories of cheesier age" : "yam yam cheese clock",
+};
+
+string[int] mayam_calendar_symbols( string option )
+{
+    string[int] symbols;
+    int space = option.index_of(" ");
+    if (space == -1) {
+	return symbols;
+    }
+
+    string command = option.substring(0, space);
+    string args = option.substring(space + 1);
+    switch (command) {
+    case "resonance":
+	string rings = resonances[args];
+	if (rings == "") {
+	    print( "VMF.MayamCalendarConsiderations: '" + args + "' in an unknown resonance.", "red" );
+	    return symbols;
+	}
+	args = rings;
+	break;
+    case "rings":
+	break;
+    default:
+	print( "VMF.MayamCalendarConsiderations: '" + option + "' must specify 'resonance' or 'rings'.", "red" );
+	return symbols;
+    }
+
+    string[] keys = args.split_string(" ");
+    if (count(keys) != 4) {
+	print( "VMF.MayamCalendarConsiderations: '" + option + "' does not specify four symbols.", "red" );
+	return symbols;
+    }
+
+    symbols[1] = keys[0];
+    symbols[2] = keys[1];
+    symbols[3] = keys[2];
+    symbols[4] = keys[3];
+
+    return symbols;
 }
 
 // Workshed items to use:
@@ -3173,6 +3258,43 @@ void validate_configuration()
 	} else if ( numberology_prize( numberology_goal) == "Try Again" ) {
 	    print( "VMF.NumberologyGoal: (" + numberology_goal + ") does not lead to a valid result.", "red" );
 	    valid = false;
+	}
+    }
+
+    // *** Mayam Calendar
+    if ( have_mayam_calendar ) {
+	// determine which symbols have already been used today
+	string_set used_symbols;
+	foreach n, symbol in get_property("_mayamSymbolsUsed").split_string(",") {
+	    used_symbols[symbol] = true;
+	}
+
+	// Validate that symbols are not repeated
+	string_set used;
+	foreach n, option in mayam_calendar_considerations {
+	    string[int] symbols = mayam_calendar_symbols( option );
+	    if (count(symbols) != 4) {
+		valid = false;
+		continue;
+	    }
+	    boolean available = true;
+	    foreach ring, symbol in symbols {
+		if (symbol == "yam") {
+		    symbol += ring;
+		}
+		if (used contains symbol) {
+		    print( "VMF.MayamCalendarConsiderations: duplicate symbol '" + symbol + ".", "red" );
+		    valid = false;
+		    continue;
+		}
+		used[symbol] = true;
+		if (used_symbols contains symbol) {
+		    available = false;
+		}
+	    }
+	    if (available) {
+		available_considerations[n] = option;
+	    }
 	}
     }
 
@@ -8037,6 +8159,19 @@ void tea_tree()
     }
 }
 
+void consider_mayam_calendar()
+{
+    if ( !have_mayam_calendar || count(available_considerations) == 0) {
+	return;
+    }
+
+    print( "Considering Mayam Calendar" );
+
+    foreach i, command in available_considerations {
+	cli_execute("mayam " + command);
+    }
+}
+
 void handle_royalty()
 {
     int tea_count = item_amount( ROYAL_TEA );
@@ -9319,6 +9454,7 @@ void run_tasks()
     claim_defective_token();
     collect_sea_jelly();
     psychoanalize_jick();
+    consider_mayam_calendar();
 
     // Collect a Guzzlr cocktail set
     handle_guzzlr();
