@@ -6093,6 +6093,12 @@ void summon_demon()
 	return;
     }
 
+    // Aftercore in The Sea path leaves all normal quests unstarted.
+    // Which is to say, the summoning chamber is not accessible.
+    if (get_property("questL11Manor") != "finished") {
+	return;
+    }
+
     // You can only summon one demon per day.
     if ( get_property( "demonSummoned" ).to_boolean() ) {
 	return;
@@ -6628,42 +6634,46 @@ void nep_fights()
 	if ( page.contains_text( "fight.php" ) ) {
 	    combat_filter_setup( NEP );
 	    run_combat( "default_filter" );
-	    fights--;
-	} else if ( last_choice() == 1322 ) {
-	    // The Beginning of the Neverend
-	    //
-	    // Choice 1 = accept quest
-	    // Choice 2 = reject quest
-	    // Choice 3 = come back later
-	    //
-	    // This script wants 10 free fights and nothing more.
-	    // Quests require non-free turns. Therefore, reject quest
-	    // This choice does not consume a turn
+	} else if ( page.contains_text( "choice.php" ) ) {
+	    switch (last_choice()) {
+	    case 1322:
+		// The Beginning of the Neverend
+		//
+		// Choice 1 = accept quest
+		// Choice 2 = reject quest
+		// Choice 3 = come back later
+		//
+		// This script wants 10 free fights and nothing more.
+		// Quests require non-free turns. Therefore, reject quest
+		run_choice( 2 );
+		break;
+	    case 1324:
+		// It Hasn't Ended, It's Just Paused
+		//
+		// Choice 1 = Head upstairs
+		// Choice 2 = Check out the kitchen
+		// Choice 3 = Go to the back yard
+		// Choice 4 = Investigate the basement
+		// Choice 5 = Pick a fight.
+		//
+		// The first 4 are only for progressing quests
 
-	    run_choice( 2 );
-	} else if ( last_choice() == 1324 ) {
-	    // It Hasn't Ended, It's Just Paused
-	    //
-	    // Choice 1 = Head upstairs
-	    // Choice 2 = Check out the kitchen
-	    // Choice 3 = Go to the back yard
-	    // Choice 4 = Investigate the basement
-	    // Choice 5 = Pick a fight.
-	    //
-	    // The first 4 are only for progressing quests
-
-	    run_choice( 5 );
-	    combat_filter_setup( NEP );
-	    run_combat( "default_filter" );
-	    fights--;
-	} else {
-	    // Turtle taming or ghost dog?
-	    // Does not consume a turn
-	    run_choice( -1 );
+		run_choice( 5 );
+		combat_filter_setup( NEP );
+		run_combat( "default_filter" );
+		break;
+	    default:
+		// Turtle taming or ghost dog?
+		run_choice( -1 );
+		break;
+	    }
 	}
 
 	// If we detected paranormal activity after that fight, may as well bust the ghost now.
 	bust_ghost();
+
+	// Since wandering monsters do not use up free turns, let KoLmafia track them.
+	fights = 10 - get_property( "_neverendingPartyFreeTurns" ).to_int();
     }
 }
 
@@ -6830,6 +6840,15 @@ void rufus_quest()
 
     // If we haven't installed ShadowRift.ash, can't do this
     if ( !check_installed( shadow_rift_scripts ) ) {
+	return;
+    }
+
+    // Aftercore in The Sea path leaves all normal quests unstarted.
+    // Which is to say, almost all Shadow Rifts are inaccessible;
+    // Only The Nearby Plains and the Right Side of the Tracks are guaranteed.
+    // ShadowRift.ash should be fixed to check accessibility of rifts.
+    // Until then, assume that if the MacGuffin quest is finished, all is well.
+    if (get_property("questL11MacGuffin") != "finished") {
 	return;
     }
 
@@ -7428,6 +7447,11 @@ boolean eat_muffin()
     item last_muffin = NO_ITEM;
 
     item available = available_muffin();
+
+    // KoL now frequently returns a response code of 502.
+    // We cannot handle that.
+    // return false;
+
     // Eat a muffin
     while ( true ) {
 	// If we have a muffin, eat it now
