@@ -7401,13 +7401,13 @@ boolean eat_muffin()
 	return 0;
     }
 
-    void visit_breakfast_counter()
+    boolean visit_breakfast_counter()
     {
 	int index = monorail_index( "Visit the Breakfast Counter" );
-	run_choice( index );
+	return run_choice( index ).length() > 0;
     }
 
-    void order_next_muffin( item previous )
+    boolean order_next_muffin( item previous )
     {
 	item next_muffin = muffin_to_order;
 	if ( next_muffin == NO_ITEM ) {
@@ -7429,19 +7429,19 @@ boolean eat_muffin()
 	// times you are also offered the chance to buy another muffin tin.
 
 	int index = monorail_index( "Order a " + next_muffin );
-	run_choice( index );
+	return run_choice( index ).length() > 0;
     }
 
-    void return_to_platform()
+    boolean return_to_platform()
     {
 	int index = monorail_index( "Back to the Platform!" );
-	run_choice( index );
+	return run_choice( index ).length() > 0;
     }
 
-    void leave_platform()
+    boolean leave_platform()
     {
 	int index = monorail_index( "Nevermind" );
-	run_choice( index );
+	return run_choice( index ).length() > 0;
     }
 
     item last_muffin = NO_ITEM;
@@ -7475,7 +7475,9 @@ boolean eat_muffin()
 	available = available_muffin();
 	if ( available != NO_ITEM ) {
 	    return_to_platform();
-	    leave_platform();
+
+	    // KoL sometimes returns a 502 - i.e. no content - for this choice
+	    while (!leave_platform()) waitq(1);
 	    continue;
 	}
 
@@ -7488,7 +7490,9 @@ boolean eat_muffin()
 
 	// Exit the Breakfast Counter. We're done here.
 	return_to_platform();
-	leave_platform();
+
+	// KoL sometimes returns a 502 - i.e. no content - for this choice
+	while (!leave_platform()) waitq(1);
 	return false;
     }
 
@@ -7501,9 +7505,11 @@ boolean eat_muffin()
     if ( get_property( "muffinOnOrder" ) == "none" ) {
 	order_next_muffin( last_muffin );
     }
-    return_to_platform();
-    leave_platform();
 
+    return_to_platform();
+
+    // KoL sometimes returns a 502 - i.e. no content - for this choice
+    while (!leave_platform()) waitq(1);
     return true;
 }
 
@@ -7577,9 +7583,14 @@ void eat_up()
 
     // Muffins are a good choice to eat as your first food of the day
     if ( should_eat_muffins ) {
-	if ( eat_muffin() ) {
-	    current_full = my_fullness();
-	    full_remaining = max_full - current_full;
+	try {
+	    // cli_execute("debug on");
+	    if ( eat_muffin() ) {
+		current_full = my_fullness();
+		full_remaining = max_full - current_full;
+	    }
+	} finally {
+	    // cli_execute("debug off");
 	}
     }
 
