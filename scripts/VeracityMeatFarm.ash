@@ -7401,10 +7401,55 @@ boolean eat_muffin()
 	return 0;
     }
 
+    // KoL now frequently returns a response code of 502 in the monorail
+    // All monorail requests must check if they got a result.
+    // Abort if request failed.
+
+    void check_successful_request(buffer page, boolean choice_expected)
+    {
+	// We expect that leaving the platform redirects to place.php,
+	// which takes us out of a choice and give us an empty buffer.
+	if ( !choice_expected ) {
+	    if (!handling_choice()) {
+		return;
+	    }
+	    print("Failed to exit monorail station.", "red");
+	    print("Use 'choice' commands to exit choice and restart VMF", "red");
+	    abort();
+	}
+
+	// Otherwise, we expect to be handling a choice unless we left the platform
+	if ( !handling_choice() ) {
+	    print("Failed to enter monorail station. Restart VMF.", "red");
+	    abort();
+	}
+
+	if ( page.length() == 0) {
+	    print("Monorail request might have left us in a choice.", "red");
+	    print("Use 'choice' commands to exit choice and restart VMF", "red");
+	    abort();
+	}
+    }
+
+    void go_downtown()
+    {
+	buffer page = visit_url( "place.php?whichplace=monorail&action=monorail_downtown" );
+	check_successful_request( page, true );
+    }
+
+    void run_monorail_choice( string text, boolean choice_expected )
+    {
+	int index = monorail_index( text );
+	buffer page;
+	if ( index > 0 ) {
+	    page = run_choice( index );
+	}
+	check_successful_request( page, choice_expected );
+    }
+
     void visit_breakfast_counter()
     {
-	int index = monorail_index( "Visit the Breakfast Counter" );
-	run_choice( index );
+	run_monorail_choice(  "Visit the Breakfast Counter", true );
     }
 
     void order_next_muffin( item previous )
@@ -7428,29 +7473,22 @@ boolean eat_muffin()
 	// We have to search for the correct option; apparently, some
 	// times you are also offered the chance to buy another muffin tin.
 
-	int index = monorail_index( "Order a " + next_muffin );
-	run_choice( index );
+	run_monorail_choice( "Order a " + next_muffin, true );
     }
 
     void return_to_platform()
     {
-	int index = monorail_index( "Back to the Platform!" );
-	run_choice( index );
+	run_monorail_choice( "Back to the Platform!", true );
     }
 
     void leave_platform()
     {
-	int index = monorail_index( "Nevermind" );
-	run_choice( index );
+	run_monorail_choice( "Nevermind", false );
     }
 
     item last_muffin = NO_ITEM;
 
     item available = available_muffin();
-
-    // KoL now frequently returns a response code of 502.
-    // We cannot handle that.
-    // return false;
 
     // Eat a muffin
     while ( true ) {
@@ -7468,7 +7506,7 @@ boolean eat_muffin()
 	}
 
 	// Visit Breakfast Counter to pick up our order, if any.
-	visit_url( "place.php?whichplace=monorail&action=monorail_downtown" );
+	go_downtown();
 	visit_breakfast_counter();
 
 	// If we got a muffin, exit the breakfast counter and eat it.
@@ -7495,7 +7533,7 @@ boolean eat_muffin()
     // We've eaten a muffin and have a muffin tin in inventory.
     // Order a new muffin
 
-    visit_url( "place.php?whichplace=monorail&action=monorail_downtown" );
+    go_downtown();
     visit_breakfast_counter();
     // We might have already ordered a muffin today
     if ( get_property( "muffinOnOrder" ) == "none" ) {
@@ -7562,6 +7600,14 @@ void eat_up()
 	cli_execute( "barrelprayer buff" );
     }
 
+    // Muffins are a good choice to eat as your first food of the day
+    if ( should_eat_muffins ) {
+	if ( eat_muffin() ) {
+	    current_full = my_fullness();
+	    full_remaining = max_full - current_full;
+	}
+    }
+
     // spaghetti breafast gives 6 adventures if you are Level 11 or better. If you know the skill
     // and can summon one, it's worth using
     if ( have_skill( SPAGHETTI_BREAKFAST_SKILL ) ) {
@@ -7570,14 +7616,6 @@ void eat_up()
 	}
 	if ( current_full == 0 && !get_property( "_spaghettiBreakfastEaten" ).to_boolean() ) {
 	    eat_food( 1, SPAGHETTI_BREAKFAST );
-	    current_full = my_fullness();
-	    full_remaining = max_full - current_full;
-	}
-    }
-
-    // Muffins are a good choice to eat as your first food of the day
-    if ( should_eat_muffins ) {
-	if ( eat_muffin() ) {
 	    current_full = my_fullness();
 	    full_remaining = max_full - current_full;
 	}
